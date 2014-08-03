@@ -1,0 +1,7 @@
+{
+    "last_wrds_download": {}, 
+    "wrds_username": [], 
+    "wrds_institution": [], 
+    "home_ssh": [], 
+    "reserved_folder": "Magic"
+}
