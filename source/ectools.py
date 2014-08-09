@@ -1,11 +1,22 @@
+"""
+pywrds.ectools is the main user interface for pywrds.  The primary 
+functions are get_wrds, wrds_loop, and find_wrds.
+
+I recommend that before running get_wrds or wrds_loop 
+to download data, you run wrdslib.setup_wrds_key() 
+to set up key-based authentication.  This will prevent 
+you from needing to enter your password every time 
+the program tries to connect to the WRDS server.
+"""
 # pywrds.ectools
-# last edit: 2014-08-02
+# last edit: 2014-08-04
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
 ################################################################################
 import wrdslib
 
 getSSH = wrdslib.getSSH
+
 _try_get = wrdslib._try_get
 _try_put = wrdslib._try_put
 _try_exec = wrdslib._try_exec

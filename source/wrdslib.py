@@ -1,9 +1,16 @@
+"""
+pywrds.wrdslib is a collection of functions used by ectools 
+which use or provide information specific to the WRDS SAS 
+system.
+"""
+
 # pywrds.wrdlib
 # last edit: 2014-08-02
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, json, os, re, sys, time
 ################################################################################
-from sshlib import getSSH, _try_get, _try_put, _try_exec, _try_listdir
+
+from sshlib import getSSH, put_ssh_key, _try_get, _try_put, _try_exec, _try_listdir
 wrds_domain = 'wrds.wharton.upenn.edu'
 
 ################################################################################
@@ -57,7 +64,7 @@ last_wrds_download = user_info['last_wrds_download']
 first_dates = {
 	"taq.div": 19930000,
 	"taq.mast": 19930000,
-	"taq.regsho": 19930000,
+	"taq.RGSH": 20050100,
 	"taq.cq": 19930104,
 	"taq.ct": 19930104,
 	"ff.liq_ps": 19620000,
@@ -76,6 +83,8 @@ first_dates = {
 	"crspq.rear_load": 19610000,
 	"crsp1.daily_nav_ret": 19980000,
 	"crsp.fund_summary2": 19610000,
+	"crspa.sp500": 19250000, 
+	"crspa.cti": 19250000, 
 	"crspa.bxcalind": 19610000,
 	"crspa.tfz_ft": 19610000,
 	"crspa.tfz_dly": 19610000,
@@ -271,7 +280,7 @@ def fix_weekdays(ymds, weekdays=1):
 			# weekdays==0 --> keey any valid day     #
 			ymds2.append([y,m,d])
 	return ymds2
-
+################################################################################
 
 
 
@@ -315,6 +324,10 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 	elif dataset.lower() in ['taq.mast', 'taq.div']:
 		ymdstr = '_'+str(Y)+(M != 0)*('0'*(M<10) + str(M))
 		dataset = dataset + ymdstr
+		
+	elif dataset.lower() == 'taq.rgsh':
+		ymdstr = str(100*Y+M)[2:]
+		dataset = 'taq.RGSH'+ymdstr
 	
 	if R != []:
 		rowstr = 'rows'+str(R[0])+'to'+str(R[1])+'.tsv'
@@ -555,7 +568,7 @@ def setup_wrds_key():
 
 	return [ssh, sftp]
 	"""
-	[ssh, sftp] = getSSH(wrds_domain, wrds_username, task={})
+	[ssh, sftp] = put_ssh_key(domain, username)
 	institution = get_wrds_institution(ssh, sftp)
 	return [ssh, sftp]
 

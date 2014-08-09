@@ -1,12 +1,15 @@
+"""pywrds.sshlib is essentially a wrapper around paramiko for 
+interacting with remote servers via SSH and SFTP.  Nothing 
+in sshlib is specific to WRDS.
+"""
 # pywrds.sshlib
 # last edit: 2014-08-02
-
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
 import logging, logging.handlers
 ################################################################################
 
-#@Todo: Handle BadHostKeyException
+#@Todo: Handle BadHostKeyException #
 
 
 

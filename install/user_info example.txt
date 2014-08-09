@@ -1,0 +1,8 @@
+{
+    "wrds_username": "Tony Stark",
+    "wrds_institution": "SHIELD",
+    "reserved_folder": "Jarvis",
+    "privacy": “almost-max",
+    "send_error_reports": "yes”,
+    “auto_update”: “yes”
+}
