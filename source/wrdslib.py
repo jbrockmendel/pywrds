@@ -3,14 +3,13 @@ pywrds.wrdslib is a collection of functions used by ectools
 which use or provide information specific to the WRDS SAS 
 system.
 """
-
 # pywrds.wrdlib
-# last edit: 2014-08-02
+# last edit: 2014-08-10
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, json, os, re, sys, time
 ################################################################################
+import sshlib
 
-from sshlib import getSSH, put_ssh_key, _try_get, _try_put, _try_exec, _try_listdir
 wrds_domain = 'wrds.wharton.upenn.edu'
 
 ################################################################################
@@ -568,7 +567,7 @@ def setup_wrds_key():
 
 	return [ssh, sftp]
 	"""
-	[ssh, sftp] = put_ssh_key(domain, username)
+	[ssh, sftp] = sshlib.put_ssh_key(domain, username)
 	institution = get_wrds_institution(ssh, sftp)
 	return [ssh, sftp]
 
@@ -581,7 +580,7 @@ def get_wrds_institution(ssh, sftp):
 
 	return institution_path
 	"""
-	[ssh, sftp] = getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username, task={})
+	[ssh, sftp] = sshlib.getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username, task={})
 	if not sftp:
 		return None
 	try:

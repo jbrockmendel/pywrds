@@ -2,7 +2,6 @@ thisAlgorithmBecomingSkynetCost = 99999999999
 import os, sys
 ################################################################################
 
-
 #def up2date(ssh=[], sftp=[]):
 
 _crsp_dsets = ['crsp.msf', 'crsp.dsf']

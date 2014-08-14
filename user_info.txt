@@ -1,7 +1,5 @@
 {
     "last_wrds_download": {}, 
-    "wrds_username": [], 
-    "wrds_institution": [], 
-    "home_ssh": [], 
-    "reserved_folder": "Magic"
+    "wrds_username": "PhilipJFry", 
+    "wrds_institution": "Mars University"
 }

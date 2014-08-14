@@ -13,14 +13,13 @@ the program tries to connect to the WRDS server.
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
 ################################################################################
-import wrdslib
+import sshlib, wrdslib
 
-getSSH = wrdslib.getSSH
-
-_try_get = wrdslib._try_get
-_try_put = wrdslib._try_put
-_try_exec = wrdslib._try_exec
-_try_listdir = wrdslib._try_listdir
+getSSH = sshlib.getSSH
+_try_get = sshlib._try_get
+_try_put = sshlib._try_put
+_try_exec = sshlib._try_exec
+_try_listdir = sshlib._try_listdir
 
 _dlpath = wrdslib.download_path
 _domain = wrdslib.wrds_domain
