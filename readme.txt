@@ -32,7 +32,8 @@ II) Your “user_info.txt” File
 	"download_path": "/Some/Other/Download/Path",
 
 	Make sure to include the comma at the end.  If you encounter 
-	problems, Google "JSON".
+	problems, see:
+	https://en.wikipedia.org/wiki/JSON
 
 
 
@@ -57,6 +58,7 @@ III) WRDS Configuration
 	but from then on pywrds will be able to log in to the server 
 	without a password prompt.  Note that pywrds does not 
 	store your password in any form.  See 
+	https://en.wikipedia.org/wiki/Key_authentication
 
 
 	C) Please respect the WRDS Terms of Use, which can be found here:
