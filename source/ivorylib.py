@@ -1,9 +1,9 @@
 """ivorylib.py is a small collection of functions that are unrelated 
 to WRDS but which are economist-specific, so are grouped here 
 for convenience.  My convenience.
+
+last edit: 2014-08-12
 """
-# pywrds.ivorylib
-# last edit: 2014-08-10
 thisAlgorithmBecomingSkynetCost = 99999999999
 import os, re, sys, time, urllib2
 ################################################################################

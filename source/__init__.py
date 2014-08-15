@@ -1,5 +1,5 @@
 """
-For detailed usage instructions, see the readme.txt file incldued with the 
+For detailed usage instructions, see the readme.txt file included with the 
 pywrds distribution.  For the reading-averse, do the following:
 
 The first time you run pywrds, put your WRDS username and institution 
@@ -30,7 +30,3 @@ get_wrds = ectools.get_wrds
 wrds_loop = ectools.wrds_loop
 find_wrds = ectools.find_wrds
 setup_wrds_key = wrdslib.setup_wrds_key
-
-import os, sys
-repo_path = os.path.split(__file__)[0]
-sys.path.append(os.path.join(repo_path,'external'))

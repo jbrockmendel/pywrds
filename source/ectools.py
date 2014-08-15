@@ -7,9 +7,9 @@ to download data, you run wrdslib.setup_wrds_key()
 to set up key-based authentication.  This will prevent 
 you from needing to enter your password every time 
 the program tries to connect to the WRDS server.
+
+last edit: 2014-08-12
 """
-# pywrds.ectools
-# last edit: 2014-08-04
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
 ################################################################################

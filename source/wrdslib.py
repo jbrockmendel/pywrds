@@ -26,14 +26,15 @@ if os.path.exists(user_info_filename):
 	try:
 		user_info = json.loads(content)
 	except ValueError:
-		print ('user_info.txt file does not conform to json format.'
-		+ '  Please address this and reload ectools.')
+		print ('pywrds.wrdslib warning: user_info.txt file does not '
+			+ 'conform to json format.  Please address this '
+			+ 'and reload ectools.')
 	fd.close()
 else:
-	print ('Please create a user_info.txt file conforming to the '
-	+ 'format given in the user_info_example.txt file.')
+	print ('pywrds.wrdslib warning: Please create a user_info.txt '
+		+ 'file conforming to the format given in the '
+		+ 'user_info_example.txt file.')
 
-dropbox_path = user_path
 
 
 
@@ -41,7 +42,7 @@ dropbox_path = user_path
 
 
 ################################################################################
-download_path = os.path.join(dropbox_path,'output')
+download_path = os.path.join(user_path,'output')
 if 'download_path' in user_info:
 	download_path = user_info['download_path']
 
