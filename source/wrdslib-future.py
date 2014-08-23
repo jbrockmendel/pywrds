@@ -101,7 +101,7 @@ def wrds_register():
 	using this function is probably more difficult for the user 
 	than just going to the website and setting up an account themselves.
 
-	** wrds_register has not been tested ##
+	** wrds_register has not been tested **
 
 	return success_boolean
 	"""

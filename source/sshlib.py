@@ -2,7 +2,7 @@
 interacting with remote servers via SSH and SFTP.  Nothing 
 in sshlib is specific to WRDS.
 
-last edit: 2014-08-12
+last edit: 2014-08-21
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
@@ -16,7 +16,8 @@ import logging, logging.handlers
 def getSSH(ssh, sftp, domain, username, ports=[22]):
 	"""
 	getSSH(ssh, sftp, domain, username, ports=[22])
-	checks to see if the ssh and sftp objects are active paramiko
+
+	Checks to see if the ssh and sftp objects are active paramiko
 	connections to the server at "domain".  If not, the function 
 	attempts to initiate a new connection.
 
@@ -29,7 +30,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	returns [ssh, sftp]
 	"""
 	if not has_modules['paramiko']:
-		print ('sshlib.getSSH is unavailable without dependency "paramiko"'
+		print('sshlib.getSSH is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
 		return [None, None]
 	if sftp:
@@ -100,7 +101,10 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 
 ################################################################################
 def find_ssh_key(make=1):
-	"""find_ssh_key(make=1) looks for the user's "~/.ssh" directory.
+	"""find_ssh_key(make=1) 
+
+	Looks for the user's "~/.ssh" directory, or Windows equivalent.
+
 	If it cannot find such a directory and make==1 (the default), it 
 	will make one.  It returns the directory path.  If it finds no 
 	such path and make==0, it returns None.
@@ -113,7 +117,7 @@ def find_ssh_key(make=1):
 		if make == 1:
 			os.makedirs(ssh_dir)
 		else:
-			print ('find_ssh_key() no SSH keys found, none created.')
+			print('find_ssh_key() no SSH keys found, none created.')
 			return None
 	ssh_dirlist = os.listdir(ssh_dir)
 	key_path = os.path.join(ssh_dir,'id_rsa.pub')
@@ -128,7 +132,9 @@ def find_ssh_key(make=1):
 
 ################################################################################
 def ssh_keygen():
-	"""ssh_keygen() looks for the user's RSA keys in the appropriate 
+	"""ssh_keygen() 
+
+	Looks for the user's RSA keys in the appropriate 
 	path.  If it finds neither a public key nor a private key, 
 	it will produce and return a new pair ("id_rsa", "id_rsa.pub").  
 	If it finds an existing pair, it returns that pair.  If it 
@@ -137,16 +143,18 @@ def ssh_keygen():
 
 	return key_path
 	"""
+	## Bug 2014-08-21: open(...,'wb') appears to cause a OSError 13
+	## on Windows systems.
 	if not has_modules['Crypto.PublicKey.RSA']:
-		print ('sshlib.ssh_keygen is unavailable without '
+		print('sshlib.ssh_keygen is unavailable without '
 			+'dependency "Crypto.PublicKey.RSA".  Returning None.')
 		return None
 
 	key_path = find_ssh_key(make=1)
-	key_path = os.path.split(key_path)[0]
+	ssh_dir = os.path.split(key_path)[0]
 	ssh_dirlist = os.listdir(key_path)
 	if 'id_rsa' not in ssh_dirlist and 'id_rsa.pub' not in ssh_dirlist:
-		key = RSA.generate(2048)
+		key = Crypto.PublicKey.RSA.generate(2048)
 		fd = open(os.path.join(ssh_dir,'id_rsa'),'wb')
 		fd.write(key.exportKey())
 		fd.close()
@@ -156,16 +164,24 @@ def ssh_keygen():
 		os.chmod(os.path.join(ssh_dir,'id_rsa'),600)
 		os.chmod(os.path.join(ssh_dir,'id_rsa.pub'),600)
 		os.chmod(ssh_dir,600)
+		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir,700)
 	elif 'id_rsa' in ssh_dirlist:
-		print ('ssh_keygen() expected the directory '+ssh_dir
-			+' to contain either zero or both of "id_rsa", "id_rsa.pub",'
-			+' but only "id_rsa" was found.  Aborting ssh_keygen on the '
-			+'assumption that this situation is intentional on the part '
-			+'of the user.')
-		key_path = None
+		fd = open(os.path.join(ssh_dir,'id_rsa'),'rb')
+		private_key = fd.read()
+		fd.close()
+		pk = Crypto.PublicKey.RSA.importKey(private_key)
+		public_key = pk.publickey().exportKey('OpenSSH')
+		fd = open(os.path.join(ssh_dir,'id_rsa.pub'),'wb')
+		fd.write(public_key)
+		fd.close()
+		os.chmod(os.path.join(ssh_dir,'id_rsa'),600)
+		os.chmod(os.path.join(ssh_dir,'id_rsa.pub'),600)
+		os.chmod(ssh_dir,600)
+		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
+		os.chmod(home_dir,700)
 	elif 'id_rsa.pub' in ssh_dirlist:
-		print ('ssh_keygen() expected the directory '+ssh_dir
+		print('ssh_keygen() expected the directory '+ssh_dir
 			+' to contain either zero or both of "id_rsa", "id_rsa.pub",'
 			+' but only "id_rsa.pub" was found.  Aborting ssh_keygen on '
 			+'the assumption that this situation is intentional on the '
@@ -182,10 +198,11 @@ def ssh_keygen():
 
 ################################################################################
 def put_ssh_key(domain, username):
-	"""put_ssh_key(domain, username) will attempt to log in 
-	to the given server using the given username.  If key-based 
-	authentication is not yet set up, the user will be prompted 
-	for an account password.  
+	"""put_ssh_key(domain, username) 
+
+	Attempts to log in to the given server using the given username.  
+	If key-based authentication is not yet set up, the user will be 
+	prompted for an account password.  
 
 	If login is successful, the function will find the user's 
 	public key (generating one if needbe) and put it in 
@@ -196,13 +213,13 @@ def put_ssh_key(domain, username):
 	return [ssh, sftp]
 	"""
 	if not has_modules['paramiko']:
-		print ('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
+		print('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
 		return [None, None]
 
 	key_path = ssh_keygen()
 	if not key_path:
-		print ('put_wrds_key() cannot run until the error '
+		print('put_wrds_key() cannot run until the error '
 			'produced by ssh_keygen() is resolved.')
 		return [None, None]
 	
@@ -211,7 +228,7 @@ def put_ssh_key(domain, username):
 	try:
 		ssh.connect(domain, username=username, key_filename=key_path)
 		sftp = ssh.open_sftp()
-		print ('key-based authentication is already set up '
+		print('key-based authentication is already set up '
 			+'on the server ' + domain)
 		return [ssh, sftp]
 	except paramiko.AuthenticationException:
@@ -226,11 +243,11 @@ def put_ssh_key(domain, username):
 		raise KeyboardInterrupt
 	except:# paramiko.AuthenticationException:
 		[ssh, sftp] = [None, None]
-		print ('paramiko could not connect to the server '+str(domain)
+		print('paramiko could not connect to the server '+str(domain)
 			+' with username '+str(username))
 
 	if not sftp:
-		print ('Connection to domain '+domain+' failed, '
+		print('Connection to domain '+domain+' failed, '
 			+'put_ssh_key() returning unsuccessfully')
 		return [ssh, sftp]
 
@@ -250,21 +267,21 @@ def put_ssh_key(domain, username):
 	sftp.close()
 	ssh.close()
 
-	print ('SSH key successfully deposited on the '
+	print('SSH key successfully deposited on the '
 		+domain+' server.  Checking that passwordless '
 		+'login works correctly...')
 	try:
 		ssh.connect(domain, username=username, key_filename=key_path)
-		print ('Passwordless login was successful.')
+		print('Passwordless login was successful.')
 		sftp = ssh.open_sftp()
 		success = 1
 	except paramiko.AuthenticationException:
 		[error_type, error_value, error_traceback] = sys.exc_info()
-		print ('Passwordless login was unsuccessful.  '
+		print('Passwordless login was unsuccessful.  '
 		+ 'Debugging information follows...')
-		print 'error_type = '+repr(error_type)
-		print 'error_value = '+repr(error_value)
-		print 'error_traceback = '+repr(error_traceback)
+		print('error_type = '+repr(error_type))
+		print('error_value = '+repr(error_value))
+		print('error_traceback = '+repr(error_traceback))
 		[ssh, sftp] = [None, None]
 	return [ssh, sftp]
 
@@ -300,7 +317,8 @@ def put_ssh_key(domain, username):
 ################################################################################
 def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, lag=60):
 	"""_put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports)
-	trys three times to sftp the file at local_path on the server at 
+
+	Trys three times to sftp the file at local_path on the server at 
 	remote_path, creating intermediate directories if necessary, 
 	reinitiating the ssh connection if needbe.
 
@@ -332,7 +350,8 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
 ################################################################################
 def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 	"""_try_put(local_path, remote_path, ssh, sftp, domain, username, ports)
-	trys to sftp the file at local_path on the server at 
+
+	Trys to sftp the file at local_path on the server at 
 	remote_path, reinitiating the ssh connection if needbe.
 
 	return [ssh, sftp, success]
@@ -367,7 +386,8 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 ################################################################################
 def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag):
 	"""_check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
-	checks whether the file exists at local_path and has 
+
+	Checks whether the file exists at local_path and has 
 	remained unchanged for at least lag seconds.  If not, 
 	it returns a code go_on=0 indicating that this file 
 	should be skipped by any downloading script.
@@ -451,7 +471,8 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 ################################################################################
 def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 	"""_try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22])
-	trys three times to download a file from the remote ssh server 
+
+	Trys three times to download a file from the remote ssh server 
 	from remote_path to local_path.  If a connection error occurs, it 
 	is re-established.
 
@@ -490,7 +511,8 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 ################################################################################
 def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 	"""_try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]) 
-	trys three times to get a a list of files and their attributes
+
+	Trys three times to get a a list of files and their attributes
 	from the directory remote_dir on the remote server,
 	reinitiating the ssh connection if needbe.
 
@@ -522,7 +544,8 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 ################################################################################
 def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
 	"""_try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports) 
-	trys to find the stats (like os.stat) of the file at remote_path, 
+
+	Trys to find the stats (like os.stat) of the file at remote_path, 
 	reinitiating the connection if necessary.  The output includes 
 	an indicator which is True if the stats are found, and False, 
 	otherwise (usually indicating the file does not exist).
@@ -606,10 +629,12 @@ default_logger.addHandler(default_handler)
 
 ################################################################################
 def timeout_decorator(timeout_time, default):
-	"""A function decorated with timeout_decorator(timeout_time,default) 
+	"""timeout_decorator(timeout_time, default)
+
+	A function decorated with timeout_decorator(timeout_time,default) 
 	either finished within "timeout_time" seconds or will exit and 
 	return "default".
-	Copied from 
+	Copied with minor alterations from 
 	http://pguides.net/python-tutorial/python-timeout-a-function/
 
 	return timeout_function
@@ -661,7 +686,7 @@ try:
 	import paramiko
 	has_modules['paramiko'] = 1
 except:
-	print ('Some pywrds.sshlib'
+	print('Some pywrds.sshlib'
 		+' functionality requires the package "paramiko".'
 		+'  Please "pip install paramiko".  Otherwise some '
 		+' functionality will be limited.')
@@ -671,7 +696,7 @@ try:
 	import Crypto.PublicKey.RSA
 	has_modules['Crypto.PublicKey.RSA'] = 1
 except:
-	print ('Some pywrds.sshlib'
+	print('Some pywrds.sshlib'
 		+' functionality requires the package "Crypto.PublicKey.RSA".'
 		+'  Please "pip install pycrypto".  Otherwise some '
 		+' functionality will be limited.\n'

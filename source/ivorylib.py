@@ -5,9 +5,14 @@ for convenience.  My convenience.
 last edit: 2014-08-12
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
-import os, re, sys, time, urllib2
+import os, re, sys, time
+
+if sys.version.startswith('2'):
+	import urllib2.urlopen as urlopen
+else:
+	import urllib.request.urlopen as urlopen
 ################################################################################
-from wrdslib import user_info
+from .wrdslib import user_info
 
 
 
@@ -21,15 +26,15 @@ def nber_papers():
 	"""
 	papers = 0
 	if not has_modules['BeautifulSoup']:
-		print ('ivorylib.nber_papers() is unavailable without the dependency'
+		print('ivorylib.nber_papers() is unavailable without the dependency'
 			+ '"BeautifulSoup".  This can be installed with '
 			+ '"pip install BeautifulSoup".')
 		return papers
 	URL = 'http://www.nber.org/rss/new.xml'
 	try:
-		page = urllib2.urlopen(URL)
+		page = urlopen(URL)
 	except:
-		print ('urllib2.urlopen failure, nber_papers() returning')
+		print('ivorylib.nber_papers urlopen failure, nber_papers() returning')
 		return papers
 	soup = BeautifulSoup.BeautifulSoup(page)
 	page.close()
@@ -42,9 +47,9 @@ def nber_papers():
 		if title+'.pdf' not in flist:
 			fd = open(title+'.pdf','wb')
 			try:
-				page = urllib2.urlopen(itemdict[title]['URL'])
+				page = urlopen(itemdict[title]['URL'])
 			except:
-				print ('urllib2.urlopen could not open page '
+				print('ivorylib.nber_papers urlopen could not open page '
 					+ itemdict[title]['URL']
 					+ ', continuing to next paper...')
 				fd.close()
@@ -73,11 +78,11 @@ def fix_bib(docname = []):
 	to do this automatically is to include in the header of 
 	your TeX file the following:
 
-		\usepackage{python}
-		\begin{python}
+		usepackage{python}
+		begin{python}
 		import os
 		os.system('python ~/Dropbox/USERNAME/ectools.py fix_bib')
-		\end{python}
+		end{python}
 
 	return success_boolean
 	"""
@@ -113,7 +118,7 @@ for module_name in ['BeautifulSoup']:
 		exec('import '+module_name)
 		has_modules[module_name] = 1
 	except ImportError:
-		print ('Some '+sys._getframe().f_code.co_filename
+		print('Some '+sys._getframe().f_code.co_filename
 		+' functionality requires the package "'+module_name
 		+'".  Please "pip install '+module_name+'".  Otherwise some '
 		+sys._getframe().f_code.co_filename

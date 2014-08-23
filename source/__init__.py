@@ -24,7 +24,7 @@ Data files will download to the pywrds/output directory.  Have fun.
 
 thisAlgorithmBecomingSkynetCost = 99999999999
 __all__ = ["ectools", "ivorylib", "wrdslib", "wrds_loop", "get_wrds", "find_wrds", "setup_wrds_key"]
-import ectools, wrdslib, ivorylib
+from . import ectools, wrdslib, ivorylib
 
 get_wrds = ectools.get_wrds
 wrds_loop = ectools.wrds_loop

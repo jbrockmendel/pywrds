@@ -1,2 +1,2 @@
 thisAlgorithmBecomingSkynetCost = 99999999999
-from source import *
+from .source import *

@@ -2,13 +2,13 @@
 pywrds.wrdslib is a collection of functions used by ectools 
 which use or provide information specific to the WRDS SAS 
 system.
+
+last edit: 2014-08-13
 """
-# pywrds.wrdlib
-# last edit: 2014-08-10
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, json, os, re, sys, time
 ################################################################################
-import sshlib
+from . import sshlib
 
 wrds_domain = 'wrds.wharton.upenn.edu'
 
@@ -19,10 +19,10 @@ this_file = os.path.abspath(__file__)
 user_path = this_file.split('source')[0]
 user_info_filename = os.path.join(user_path,'user_info.txt')
 if os.path.exists(user_info_filename):
-	fd = open(user_info_filename,'rb')
+	fd = open(user_info_filename,'r') # r instead of rb for Python3 compatibility #
 	content = fd.read()
-	content = content.replace('\xe2\x80\x9c','"')
-	content = content.replace('\xe2\x80\x9d','"')
+	content = content.replace(u'\xe2\x80\x9c',u'"')
+	content = content.replace(u'\xe2\x80\x9d',u'"')
 	try:
 		user_info = json.loads(content)
 	except ValueError:
@@ -568,7 +568,11 @@ def setup_wrds_key():
 
 	return [ssh, sftp]
 	"""
-	[ssh, sftp] = sshlib.put_ssh_key(domain, username)
+	if not wrds_username:
+		print('setup_wrds_key() cannot run until wrds_username is '
+			+'specified in the user_info.txt file.')
+		return [None, None]
+	[ssh, sftp] = sshlib.put_ssh_key(domain=wrds_domain, username=wrds_username)
 	institution = get_wrds_institution(ssh, sftp)
 	return [ssh, sftp]
 
@@ -581,7 +585,7 @@ def get_wrds_institution(ssh, sftp):
 
 	return institution_path
 	"""
-	[ssh, sftp] = sshlib.getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username, task={})
+	[ssh, sftp] = sshlib.getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username)
 	if not sftp:
 		return None
 	try:
