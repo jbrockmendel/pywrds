@@ -14,6 +14,8 @@ wrds_domain = 'wrds.wharton.upenn.edu'
 
 ################################################################################
 
+
+
 user_info = {}
 this_file = os.path.abspath(__file__)
 user_path = this_file.split('source')[0]
@@ -26,12 +28,12 @@ if os.path.exists(user_info_filename):
 	try:
 		user_info = json.loads(content)
 	except ValueError:
-		print ('pywrds.wrdslib warning: user_info.txt file does not '
+		print('pywrds.wrdslib warning: user_info.txt file does not '
 			+ 'conform to json format.  Please address this '
 			+ 'and reload ectools.')
 	fd.close()
 else:
-	print ('pywrds.wrdslib warning: Please create a user_info.txt '
+	print('pywrds.wrdslib warning: Please create a user_info.txt '
 		+ 'file conforming to the format given in the '
 		+ 'user_info_example.txt file.')
 
@@ -422,7 +424,7 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 		fd.write(json.dumps(user_info, indent=4))
 		fd.close()
 	else:
-		print ('Could not retrieve: ' + fname)
+		print('Could not retrieve: ' + fname)
 	return
 ################################################################################
 
@@ -461,7 +463,7 @@ def min_YMD(min_date, dataset):
 		min_date = str(min_date)
 		if not min_date.isdigit() or len(min_date) != 8:
 			min_date = 0
-			print ('user_info["last_wrds_download"]["'+dataset+'"]='
+			print('user_info["last_wrds_download"]["'+dataset+'"]='
 				+min_date+' error, should be an eight digit integer.')
 		min_year = int(float(min_date[:4]))
 		min_month = int(float(min_date[4:6]))
@@ -489,7 +491,7 @@ def min_YMD(min_date, dataset):
 			min_day = 0
 			min_month = 0
 			min_year = 1880
-			print ('Setting min_year = 1880.  This will result in '
+			print('Setting min_year = 1880.  This will result in '
 				+'many empty data files and unnecessary looping.  '
 				+'This can be prevented by a) inputting a higher '
 				+'min_date or b) finding the first date at which '
@@ -591,7 +593,7 @@ def get_wrds_institution(ssh, sftp):
 	try:
 		wrds_path = sftp.normalize(path='.')
 	except IOError:
-		print ('sftp cannot resolve a path on the wrds server')
+		print('sftp cannot resolve a path on the wrds server')
 		return None
 	institution_path = re.sub('/home/','',wrds_path).split('/')[0]
 	if wrds_institution != institution_path:
@@ -602,7 +604,7 @@ def get_wrds_institution(ssh, sftp):
 			fd.write(json.dumps(user_info, indent=4))
 			fd.close()
 		else:
-			print ('user_info["wrds_institution"] does not '
+			print('user_info["wrds_institution"] does not '
 				+ 'match the directory "'+institution_path+'" '
 				+ 'found on the wrds server.  '
 				+ 'This mismatch may cause errors '

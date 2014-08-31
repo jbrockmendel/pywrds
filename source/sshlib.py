@@ -153,6 +153,16 @@ def ssh_keygen():
 	key_path = find_ssh_key(make=1)
 	ssh_dir = os.path.split(key_path)[0]
 	ssh_dirlist = os.listdir(key_path)
+
+	pub_path = os.path.join(ssh_dir,'id_rsa.pub')
+	pub_read = os.path.exists(pub_path) and os.access(pub_path, os.R_OK)
+	pub_write = pub_read and os.access(pub_path, os.W_OK)
+
+	priv_path = os.path.join(ssh_dir,'id_rsa')
+	priv_read = os.path.exists(priv_path) and os.access(priv_path, os.R_OK)
+	priv_write = pub_read and os.access(priv_path, os.W_OK)
+
+	pub_ROK = 'id_rsa.pub' in ssh_dirlist and os.access()
 	if 'id_rsa' not in ssh_dirlist and 'id_rsa.pub' not in ssh_dirlist:
 		key = Crypto.PublicKey.RSA.generate(2048)
 		fd = open(os.path.join(ssh_dir,'id_rsa'),'wb')

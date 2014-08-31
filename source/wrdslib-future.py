@@ -106,7 +106,7 @@ def wrds_register():
 	return success_boolean
 	"""
 	if not has_modules['selenium.webdriver']:
-		print ('wrdslib.wrds_register is unavailable without '
+		print('wrdslib.wrds_register is unavailable without '
 			+'the dependency "selenium.webdriver".')
 		return 0
 	browser = webdriver.Firefox()
@@ -128,33 +128,33 @@ def wrds_register():
 			matching_institutions = [x for x in institutions 
 				if re.search(wrds_institution,x,flags = re.I)]
 	if matching_institutions == []:
-		print ('Could not find an available institution matching '
+		print('Could not find an available institution matching '
 			+ 'your input.  Please select your institution '
 			+ 'from the following list:')
-		print '\n'.join(institutions)
+		print('\n'.join(institutions))
 		wrds_institution2 = raw_input("institution: ")
 	elif len(matching_institutions)>1:
-		print ('Multiple institutions were found that match your '
+		print('Multiple institutions were found that match your '
 			+ 'specified wrds_institution.  Please choose your exact '
 			+' institution from the following list:')
-		print '\n'.join(matching_institutions)
+		print('\n'.join(matching_institutions))
 		wrds_institution2 = raw_input("institution: ")
 	if len(matching_institutions) == 1:
 		wrds_institution2 = matching_institutions[0]
 	if wrds_institution2 not in institutions:
-		print ('user input was not in the specified list.  '
+		print('user input was not in the specified list.  '
 			+'wrds_register is exiting uncompleted.')
 		return 0
 	#
 	scroll_choices = scroll.find_elements_by_tag_name('option')
 	user_choice = [x for x in scroll_choices if x.text == wrds_institution2]
 	if len(user_choice) != 1:
-		print ('An unrecognized problem has occurred in wrds_register.  '
+		print('An unrecognized problem has occurred in wrds_register.  '
 			+'Please forward the following to Brock for debugging:')
-		print wrds_institution
-		print wrds_institution2
-		print institutions
-		print [x.text for x in scroll_choices]
+		print(wrds_institution)
+		print(wrds_institution2)
+		print(institutions)
+		print([x.text for x in scroll_choices])
 		return 0
 	user_choice = user_choice[0]
 	user_choice.click()
@@ -170,7 +170,7 @@ def wrds_register():
 		'Research Assistant (Supervisted students only)', 
 		'Class (Faculty requestor only)'
 		]
-	print ('Which of the following best describes '
+	print('Which of the following best describes '
 		+' your affiliation with your institution: \n'
 		+'(1) Faculty\n'
 		+'(2) Staff (IT/Librarian)\n'
@@ -184,7 +184,7 @@ def wrds_register():
 	user_type = raw_input(prompt_str)
 	user_type = str(user_type)
 	if user_type not in ['1','2','3','4','5','6','7']:
-		print ('Invalid affiliation type.  '
+		print('Invalid affiliation type.  '
 			+ 'wrds_register is exiting uncompleted.')
 		return 0
 
@@ -193,12 +193,12 @@ def wrds_register():
 		if x.text == possible_types[int(float(user_type))-1]]
 	
 	if len(affiliation_choice) != 1:
-		print ('An unrecognized problem has occurred '
+		print('An unrecognized problem has occurred '
 			+ 'in wrds_register.  Please forward the '
 			+ 'following to Brock for debugging:')
-		print user_type
-		print affiliation_choice
-		print [x.text for x in affil_scroll_choices]
+		print(user_type)
+		print(affiliation_choice)
+		print([x.text for x in affil_scroll_choices])
 		return 0
 
 	affiliation_choice = affiliation_choice[0]
@@ -217,7 +217,7 @@ def wrds_register():
 
 	submit_button = browser.find_element_by_id('submit_dd')
 	submit_button.click()
-	print ('wrds_register appears to have completed '
+	print('wrds_register appears to have completed '
 		+ 'successfully.  You should receive an email '
 		+ 'from wrds or your institution confirming '
 		+ 'your registration.')
@@ -235,7 +235,7 @@ try:
 	import selenium.webdriver
 	has_modules['selenium.webdriver'] = 1
 except ImportError:
-	print ('Some wrdslib functionality requires the package '
+	print('Some wrdslib functionality requires the package '
 		+'selenium.webdriver.  Please "pip install selenium".  '
 		+' Until then some functionality will be limited.')
 	has_modules['selenium.webdriver'] = 0

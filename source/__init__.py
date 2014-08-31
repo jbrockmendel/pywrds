@@ -30,3 +30,43 @@ get_wrds = ectools.get_wrds
 wrds_loop = ectools.wrds_loop
 find_wrds = ectools.find_wrds
 setup_wrds_key = wrdslib.setup_wrds_key
+
+
+
+_pywrds_dir = os.path.join(os.path.expanduser('~'),'.pywrds')
+_user_file = os.path.join(_pwrds_dir,'user_info.txt')
+
+def setup_pywrds():
+	if not os.path.exists(_pywrds_dir):
+		try:
+			os.mkdir(_pywrds_dir)
+		except:
+			print("pywrds was unable to create the directory"
+				+ _pywrds_dir+".  Please create this directory"
+				+ " and re-load pywrds.")
+	if not os.path.exists(_user_file):
+		fd = open(_user_file,'wb') ## permissions ??## lock??##
+		fd.write('{}')
+		fd.close()
+		fd.user_info = {}
+	else:
+		fd = open(_user_file,'rb')
+		content = fd.read()
+		try:
+			fd.user_info = json.loads(content)
+		except ValueError:
+			fd.user_info = {}
+	return fd
+
+
+
+def _set_user_attr(fd, attr, value):
+	fd = open(_user_file,'rb')
+	content = fd.read()
+	try:
+		new_info = json.loads(content)
+	except ValueError:
+		new_info = {}
+	fd = open(_user_file,'wb')
+	return
+

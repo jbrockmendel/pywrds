@@ -1,7 +1,7 @@
 # Setup instructions for “pywrds”
 # Brock Mendel
 # jbrockmendel@gmail.com
-# Last Update: 2014-08-13
+# Last Update: 2014-08-24
 
 
 I) How To Use This Document
@@ -15,6 +15,10 @@ I) How To Use This Document
 	C) For specifics on the Open Source license of pywrds, 
 	see the "LICENSE.txt" document distributed with this 
 	document.
+
+	D) I would like to thank three anonymous testers for 
+	helping in the debugging of pywrds.  All remaining errors
+	are my own.
 
 
 
