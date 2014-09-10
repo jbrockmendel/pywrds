@@ -1,7 +1,7 @@
 # Setup instructions for “pywrds”
 # Brock Mendel
 # jbrockmendel@gmail.com
-# Last Update: 2014-08-13
+# Last Update: 2014-09-09
 
 
 I) How To Use This Document
@@ -15,6 +15,10 @@ I) How To Use This Document
 	C) For specifics on the Open Source license of pywrds, 
 	see the "LICENSE.txt" document distributed with this 
 	document.
+	
+	D) I would like to thank three anonymous testers for 
+	helping in the debugging of pywrds.  All remaining errors
+	are my own.
 
 
 
@@ -25,21 +29,20 @@ II) Your “user_info.txt” File
 	to their appropriate values.
 
 	C) By default, any files you download from WRDS using pywrds 
-	will be put in the pywrds/output directory.  If you want to 
+	will be put in the "pywrds/output" directory.  If you want to 
 	specify some other directory for these downloads, add to your 
 	user_info.txt file an entry (above "wrds_institution"):
 
 	"download_path": "/Some/Other/Download/Path",
 
 	Make sure to include the comma at the end.  If you encounter 
-	problems, see:
-	https://en.wikipedia.org/wiki/JSON
+	problems, see: https://en.wikipedia.org/wiki/JSON
 
 
 
 III) WRDS Configuration
 	A) You will need a WRDS account.  If you do not have one, you can
-	sign up for one at http://wrds-web.wharton.upenn.edu/
+	sign up for one at: http://wrds-web.wharton.upenn.edu/
 	(See Figure 0 in the "install" directory)
 
 
@@ -49,19 +52,19 @@ III) WRDS Configuration
 	don't want to be prompted for this password over and over 
 	again, you should set up key-based authentication.
 
-	To set up key-based authentication with the WRDS 
-	server, run the command:
+	To set up key-based authentication with the WRDS server 
+	(which I strongly recommend), run the command:
 
 	pywrds.setup_wrds_key()
 
 	You will be prompted for your WRDS password this one time, 
 	but from then on pywrds will be able to log in to the server 
 	without a password prompt.  Note that pywrds does not 
-	store your password in any form.  See 
+	store your password in any form.  See: 
 	https://en.wikipedia.org/wiki/Key_authentication
 
 
-	C) Please respect the WRDS Terms of Use, which can be found here:
+	C) Please respect the WRDS Terms of Use, which can be found at:
 	https://wrds-web.wharton.upenn.edu/wrds/about/terms.cfm
 
 
@@ -71,7 +74,7 @@ IV) Usage
 
 	pywrds.__doc__
 
-	For more in-depth instructions, enter:
+	For more in-depth instructions on the main user functions, enter:
 
 	pywrds.ectools.get_wrds.__doc__
 	pywrds.ectools.wrds_loop.__doc__
@@ -126,7 +129,8 @@ VI) Installing Python and pywrds Dependencies
 		4) The next step requires a working C compiler.  One 
 		is provided by Apple but you need to get it from the 
 		App Store.  Get Xcode from the App Store.  If you 
-		have an old version, you may need to update.  
+		have an old version, you may need to update. 
+		
 			i) On Mac OSX 10.9 Mavericks, open a Terminal
 			window and run the command:
 
