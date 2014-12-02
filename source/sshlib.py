@@ -1,4 +1,5 @@
-"""pywrds.sshlib is essentially a wrapper around paramiko for 
+"""
+pywrds.sshlib is essentially a wrapper around paramiko for 
 interacting with remote servers via SSH and SFTP.  Nothing 
 in sshlib is specific to WRDS.
 
