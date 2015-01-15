@@ -1,6 +1,6 @@
 """
-pywrds.sshlib is essentially a wrapper around paramiko for 
-interacting with remote servers via SSH and SFTP.  Nothing 
+pywrds.sshlib is essentially a wrapper around paramiko for
+interacting with remote servers via SSH and SFTP.  Nothing
 in sshlib is specific to WRDS.
 
 last edit: 2014-08-21
@@ -19,14 +19,14 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	getSSH(ssh, sftp, domain, username, ports=[22])
 
 	Checks to see if the ssh and sftp objects are active paramiko
-	connections to the server at "domain".  If not, the function 
+	connections to the server at "domain".  If not, the function
 	attempts to initiate a new connection.
 
 	The function first trys key-based
 	authentication and then falls back to password authentication.
-	If no password is entered within 10 seconds, the function 
+	If no password is entered within 10 seconds, the function
 	assumes it is being run as part of a script and skips
-	the password step.  
+	the password step.
 
 	returns [ssh, sftp]
 	"""
@@ -56,9 +56,9 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 		key_filename = find_ssh_key(0)
 		for port in ports:
 			try:
-				ssh.connect(domain, 
-					username=username, 
-					port=port, 
+				ssh.connect(domain,
+					username=username,
+					port=port,
 					key_filename=key_filename)
 				sftp = ssh.open_sftp()
 				break
@@ -69,7 +69,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 				try:
 					prompt = repr(domain)+' password: '
 					ssh.connect(domain,
-						username=username, 
+						username=username,
 						password=quick_password(prompt=prompt))
 					sftp = ssh.open_sftp()
 					break
@@ -102,12 +102,12 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 
 ################################################################################
 def find_ssh_key(make=1):
-	"""find_ssh_key(make=1) 
+	"""find_ssh_key(make=1)
 
 	Looks for the user's "~/.ssh" directory, or Windows equivalent.
 
-	If it cannot find such a directory and make==1 (the default), it 
-	will make one.  It returns the directory path.  If it finds no 
+	If it cannot find such a directory and make==1 (the default), it
+	will make one.  It returns the directory path.  If it finds no
 	such path and make==0, it returns None.
 
 	return key_path
@@ -133,13 +133,13 @@ def find_ssh_key(make=1):
 
 ################################################################################
 def ssh_keygen():
-	"""ssh_keygen() 
+	"""ssh_keygen()
 
-	Looks for the user's RSA keys in the appropriate 
-	path.  If it finds neither a public key nor a private key, 
-	it will produce and return a new pair ("id_rsa", "id_rsa.pub").  
-	If it finds an existing pair, it returns that pair.  If it 
-	finds only one of the pair existing, it will print a debugging 
+	Looks for the user's RSA keys in the appropriate
+	path.  If it finds neither a public key nor a private key,
+	it will produce and return a new pair ("id_rsa", "id_rsa.pub").
+	If it finds an existing pair, it returns that pair.  If it
+	finds only one of the pair existing, it will print a debugging
 	message and exit without changing anything.
 
 	return key_path
@@ -174,7 +174,7 @@ def ssh_keygen():
 		fd.close()
 		os.chmod(os.path.join(ssh_dir,'id_rsa'),600)
 		os.chmod(os.path.join(ssh_dir,'id_rsa.pub'),600)
-		os.chmod(ssh_dir,600)
+		os.chmod(ssh_dir,700)
 		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir,700)
 	elif 'id_rsa' in ssh_dirlist:
@@ -209,16 +209,16 @@ def ssh_keygen():
 
 ################################################################################
 def put_ssh_key(domain, username):
-	"""put_ssh_key(domain, username) 
+	"""put_ssh_key(domain, username)
 
-	Attempts to log in to the given server using the given username.  
-	If key-based authentication is not yet set up, the user will be 
-	prompted for an account password.  
+	Attempts to log in to the given server using the given username.
+	If key-based authentication is not yet set up, the user will be
+	prompted for an account password.
 
-	If login is successful, the function will find the user's 
-	public key (generating one if needbe) and put it in 
-	the appropriate location on the server.  It will set 
-	the proper permissions before logging out and testing 
+	If login is successful, the function will find the user's
+	public key (generating one if needbe) and put it in
+	the appropriate location on the server.  It will set
+	the proper permissions before logging out and testing
 	the new connection.
 
 	return [ssh, sftp]
@@ -233,7 +233,7 @@ def put_ssh_key(domain, username):
 		print('put_wrds_key() cannot run until the error '
 			'produced by ssh_keygen() is resolved.')
 		return [None, None]
-	
+
 	ssh = paramiko.SSHClient()
 	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 	try:
@@ -272,7 +272,7 @@ def put_ssh_key(domain, username):
 		sftp.put(key_path, 'authorized_keys-temp')
 		cat_cmd = 'cat authorized_keys-temp >> .ssh/authorized_keys'
 		[stdin, stdout, stderr] = ssh.exec_command(cat_cmd)
-	
+
 	sftp.chmod('.ssh/authorized_keys',600)
 	sftp.chmod('.ssh',700)
 	sftp.close()
@@ -329,16 +329,16 @@ def put_ssh_key(domain, username):
 def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, lag=60):
 	"""_put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports)
 
-	Trys three times to sftp the file at local_path on the server at 
-	remote_path, creating intermediate directories if necessary, 
+	Trys three times to sftp the file at local_path on the server at
+	remote_path, creating intermediate directories if necessary,
 	reinitiating the ssh connection if needbe.
 
-	The function returns successful if it finds that the file 
-	already exists at remote_path and it has the same size as 
+	The function returns successful if it finds that the file
+	already exists at remote_path and it has the same size as
 	the file at local_path.
 
-	Alternately if the file exists at remote_path and has both 
-	a larger file size and a more recent modification time, the 
+	Alternately if the file exists at remote_path and has both
+	a larger file size and a more recent modification time, the
 	function returns successfully.
 
 	return [ssh, sftp, success, time_elapsed]
@@ -346,7 +346,7 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
 	tic = time.time()
 	[success, num_trys, max_trys] = [0, 0, 3]
 	[dname, fname] = os.path.split(local_path)
-	
+
 	[ssh, sftp, go_on, success] = _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
 	if not go_on:
 		return [ssh, sftp, success, time.time()-tic]
@@ -362,7 +362,7 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
 def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 	"""_try_put(local_path, remote_path, ssh, sftp, domain, username, ports)
 
-	Trys to sftp the file at local_path on the server at 
+	Trys to sftp the file at local_path on the server at
 	remote_path, reinitiating the ssh connection if needbe.
 
 	return [ssh, sftp, success]
@@ -398,35 +398,35 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag):
 	"""_check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
 
-	Checks whether the file exists at local_path and has 
-	remained unchanged for at least lag seconds.  If not, 
-	it returns a code go_on=0 indicating that this file 
+	Checks whether the file exists at local_path and has
+	remained unchanged for at least lag seconds.  If not,
+	it returns a code go_on=0 indicating that this file
 	should be skipped by any downloading script.
 
-	Otherwise the function checks for the existence of the 
-	file at remote_path.  If the file does not exist, it 
+	Otherwise the function checks for the existence of the
+	file at remote_path.  If the file does not exist, it
 	returns go_on=1.
 
-	If the remote file exists, the function checks whether 
-	that file has been modified in the last lag seconds, 
-	and if so returns go_on=0.  
+	If the remote file exists, the function checks whether
+	that file has been modified in the last lag seconds,
+	and if so returns go_on=0.
 
-	In each of these last three cases, along with go_on 
-	the function returns success=0 indicating that the 
+	In each of these last three cases, along with go_on
+	the function returns success=0 indicating that the
 	transfer has not yet been accomplished.
 
-	If both files exist and neither file has been modified 
-	in the last lag seconds, the function checks if the two 
+	If both files exist and neither file has been modified
+	in the last lag seconds, the function checks if the two
 	files are the same size.  If so, it returns go_on=0
-	and success=1 indicating that the file can be skipped 
+	and success=1 indicating that the file can be skipped
 	because the transfer has already occurred successfully.
 
-	If the remote file is both bigger and more recently 
-	modified than the local file, the function returns 
-	go_on=0, success=1, assuming that the newer bigger 
+	If the remote file is both bigger and more recently
+	modified than the local file, the function returns
+	go_on=0, success=1, assuming that the newer bigger
 	file is the correct version.
 
-	In all other cases, the function returns go_on=1, 
+	In all other cases, the function returns go_on=1,
 	success=0.
 
 	return [ssh, sftp, go_on, success]
@@ -467,7 +467,7 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 		if remote_stat.st_size == local_stat.st_size:
 			return [ssh, sftp, 0, 1]
 
-		if (remote_stat.st_mtime > local_stat.st_mtime 
+		if (remote_stat.st_mtime > local_stat.st_mtime
 			and remote_stat.st_size > local_stat.st_size):
 			return [ssh, sftp, 0, 1]
 
@@ -483,14 +483,14 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 	"""_try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22])
 
-	Trys three times to download a file from the remote ssh server 
-	from remote_path to local_path.  If a connection error occurs, it 
+	Trys three times to download a file from the remote ssh server
+	from remote_path to local_path.  If a connection error occurs, it
 	is re-established.
 
-	_try_get does *not* check that the remote file exists, that 
-	the local_path is not already in use, or that there is enough 
+	_try_get does *not* check that the remote file exists, that
+	the local_path is not already in use, or that there is enough
 	space free on the local disk to complete the download.
-	
+
 	return [success_boolean, time_elapsed]
 	"""
 	tic = time.time()
@@ -521,13 +521,13 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 
 ################################################################################
 def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
-	"""_try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]) 
+	"""_try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22])
 
 	Trys three times to get a a list of files and their attributes
 	from the directory remote_dir on the remote server,
 	reinitiating the ssh connection if needbe.
 
-	Creates a dictionary fdict = {filename: [attributes]} across 
+	Creates a dictionary fdict = {filename: [attributes]} across
 	the files in the remote directory.
 
 	returns [ssh, sftp, fdict]
@@ -554,11 +554,11 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 
 ################################################################################
 def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
-	"""_try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports) 
+	"""_try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports)
 
-	Trys to find the stats (like os.stat) of the file at remote_path, 
-	reinitiating the connection if necessary.  The output includes 
-	an indicator which is True if the stats are found, and False, 
+	Trys to find the stats (like os.stat) of the file at remote_path,
+	reinitiating the connection if necessary.  The output includes
+	an indicator which is True if the stats are found, and False,
 	otherwise (usually indicating the file does not exist).
 
 	returns [ssh, sftp, remote_size, exists_boolean]
@@ -605,9 +605,9 @@ def _try_exec(command, ssh, sftp, domain, username, ports=[22]):
 def print_func(level=1):
 	"""print_func(level=1)
 
-	When called from within function "myfunction" defined in module 
+	When called from within function "myfunction" defined in module
 	"mymodule", print_func(1) returns the string "mymodule.myfunction".
-	setting level=2 returns a string corresponding to the function 
+	setting level=2 returns a string corresponding to the function
 	that called myfunction, and so on.
 
 	This is designed for identifying the sources of errors in logging.
@@ -642,10 +642,10 @@ default_logger.addHandler(default_handler)
 def timeout_decorator(timeout_time, default):
 	"""timeout_decorator(timeout_time, default)
 
-	A function decorated with timeout_decorator(timeout_time,default) 
-	either finished within "timeout_time" seconds or will exit and 
+	A function decorated with timeout_decorator(timeout_time,default)
+	either finished within "timeout_time" seconds or will exit and
 	return "default".
-	Copied with minor alterations from 
+	Copied with minor alterations from
 	http://pguides.net/python-tutorial/python-timeout-a-function/
 
 	return timeout_function
@@ -673,8 +673,8 @@ class TimeoutException(Exception):
 
 @timeout_decorator(10, '')
 def quick_password(prompt="Please enter your password: "):
-	"""Prompt the user for a password.  The decorated function 
-	gives an upper bound of 10 seconds on how long it will wait 
+	"""Prompt the user for a password.  The decorated function
+	gives an upper bound of 10 seconds on how long it will wait
 	for input before assuming an empty string.
 
 	return password
