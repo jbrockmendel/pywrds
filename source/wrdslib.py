@@ -1,12 +1,16 @@
 """
-pywrds.wrdslib is a collection of functions used by ectools 
-which use or provide information specific to the WRDS SAS 
+pywrds.wrdslib is a collection of functions used by ectools
+which use or provide information specific to the WRDS SAS
 system.
 
 last edit: 2014-08-13
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
-import datetime, json, os, re, sys, time
+import datetime, os, re, sys, time
+
+try: import simplejson as json
+except ImportError: import json
+
 ################################################################################
 from . import sshlib
 
@@ -85,8 +89,8 @@ first_dates = {
 	"crspq.rear_load": 19610000,
 	"crsp1.daily_nav_ret": 19980000,
 	"crsp.fund_summary2": 19610000,
-	"crspa.sp500": 19250000, 
-	"crspa.cti": 19250000, 
+	"crspa.sp500": 19250000,
+	"crspa.cti": 19250000,
 	"crspa.bxcalind": 19610000,
 	"crspa.tfz_ft": 19610000,
 	"crspa.tfz_dly": 19610000,
@@ -178,14 +182,14 @@ dataset_list = [
 def rows_per_file_adjusted(dataset):
 	"""rows_per_file_adjusted(dataset)
 
-	_rows_per_file chooses a number of rows to query in each 
-	_get_wrds_chunk request to ensure that the files produced 
-	do not approach the 1 GB server limit.  For most datasets, 
-	10^7 rows in a file is not a problem.  For optionm.opprcd, 
+	_rows_per_file chooses a number of rows to query in each
+	_get_wrds_chunk request to ensure that the files produced
+	do not approach the 1 GB server limit.  For most datasets,
+	10^7 rows in a file is not a problem.  For optionm.opprcd,
 	this number is dropped to 10^6.
 
-	To date optionm.opprcd is the only dataset for which this has 
-	consistently been necessary.  This is subject to change 
+	To date optionm.opprcd is the only dataset for which this has
+	consistently been necessary.  This is subject to change
 	with further use cases.
 
 	return rows_per_file
@@ -203,10 +207,10 @@ def rows_per_file_adjusted(dataset):
 now = time.localtime()
 [this_year, this_month, today] = [now.tm_year, now.tm_mon, now.tm_mday]
 def get_ymd_range(min_date, dataset, weekdays=1):
-	"""get_ymd_range(min_date, dataset, weekdays=1) gets a list of 
-	tuples [year, month, date] over which to iterate in wrds_loop.  Some 
-	datasets include very large files and need to be queried 
-	at a monthly or daily frequency to prevent giant files from 
+	"""get_ymd_range(min_date, dataset, weekdays=1) gets a list of
+	tuples [year, month, date] over which to iterate in wrds_loop.  Some
+	datasets include very large files and need to be queried
+	at a monthly or daily frequency to prevent giant files from
 	causing problems on the server.
 
 	return ymdrange
@@ -235,8 +239,8 @@ def get_ymd_range(min_date, dataset, weekdays=1):
 
 ################################################################################
 def get_loop_frequency(dataset, year):
-	"""get_loop_frequency(dataset, year) finds the best frequency at which 
-	to query the server for the given dataset so as to avoid producing 
+	"""get_loop_frequency(dataset, year) finds the best frequency at which
+	to query the server for the given dataset so as to avoid producing
 	problematically large files.
 
 	return frequency
@@ -260,11 +264,11 @@ def get_loop_frequency(dataset, year):
 
 ################################################################################
 def fix_weekdays(ymds, weekdays=1):
-	"""fix_weekdays(ymds, weekdays=1) takes a set of [year,month,date] 
-	tuples "ymds" and removes those which are not valid days, 
+	"""fix_weekdays(ymds, weekdays=1) takes a set of [year,month,date]
+	tuples "ymds" and removes those which are not valid days,
 	e.g. June 31, February 30.
 
-	If weekdays is set to its default value of 1, it also removes 
+	If weekdays is set to its default value of 1, it also removes
 	Saturday and Sundays.
 
 	return ymds
@@ -295,8 +299,8 @@ def fix_weekdays(ymds, weekdays=1):
 
 ################################################################################
 def fix_input_name(dataset, year, month, day, rows=[]):
-	"""fix_input_name(dataset, year, month, day, rows=[]) 
-	adjusts the user-supplied dataset name to use the same 
+	"""fix_input_name(dataset, year, month, day, rows=[])
+	adjusts the user-supplied dataset name to use the same
 	upper/lower case conventions as WRDS does.
 
 	return [dataset, output_file]
@@ -307,7 +311,7 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 		mstr = '' + (M != 0)*('0'*(month<10)+str(M))
 		dstr = (D != 0)*('0'*(D<10)+str(D))
 		ymdstr = ystr + mstr + dstr +'.tsv'
-		output_file = re.sub('\.','_',dataset) + ymdstr 
+		output_file = re.sub('\.','_',dataset) + ymdstr
 	else:
 		output_file = re.sub('\.','_',dataset)+'.tsv'
 
@@ -322,15 +326,15 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 		dstr = ''+(D != 0)*('0'*(D<10)+str(D))
 		ymdstr = ystr + mstr + dstr
 		dataset = dataset + ymdstr
-	
+
 	elif dataset.lower() in ['taq.mast', 'taq.div']:
 		ymdstr = '_'+str(Y)+(M != 0)*('0'*(M<10) + str(M))
 		dataset = dataset + ymdstr
-		
+
 	elif dataset.lower() == 'taq.rgsh':
 		ymdstr = str(100*Y+M)[2:]
 		dataset = 'taq.RGSH'+ymdstr
-	
+
 	if R != []:
 		rowstr = 'rows'+str(R[0])+'to'+str(R[1])+'.tsv'
 		output_file = re.sub('.tsv$','',output_file) + rowstr
@@ -341,8 +345,8 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 
 ################################################################################
 def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
-	"""wrds_sas_script(dataset, year, month=0, day=0, rows=[]) 
-	generates a .sas file which is executed on the WRDS server 
+	"""wrds_sas_script(dataset, year, month=0, day=0, rows=[])
+	generates a .sas file which is executed on the WRDS server
 	to produce the desired dataset.
 
 	return [sas_file, output_file, dataset]
@@ -355,7 +359,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	ymdstr = ystr + mstr + dstr
 	sas_file = 'wrds_export_'+re.sub('\.','_',dataset)
 
-	if R != []: 
+	if R != []:
 		rowstr = 'rows'+str(R[0])+'to'+str(R[1])
 		sas_file =  sas_file + ymdstr + rowstr
 	else:
@@ -390,7 +394,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	if R != []:
 		rowquery = ('\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n')
 		fd.write(rowquery)
-	
+
 	fd.write('\n')
 	fd.write('proc export data = new_data\n')
 	fd.write(('\toutfile = "~/'+output_file+'" \n'
@@ -409,8 +413,8 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 
 ################################################################################
 def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
-	"""update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0) 
-	amends the user_info file to reflect the most recent download dates 
+	"""update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0)
+	amends the user_info file to reflect the most recent download dates
 	for wrds files.
 
 	return
@@ -437,9 +441,9 @@ _get_all = ['crsp.stocknames', 'comp.company', 'comp.g_company']
 # dataset at once                                            #
 
 def min_YMD(min_date, dataset):
-	"""min_YMD(min_date, dataset) finds (year,month,day) at which 
-	to start wrds_loop when downloading the entirety of a 
-	dataset.  It checks user_info to find what files have 
+	"""min_YMD(min_date, dataset) finds (year,month,day) at which
+	to start wrds_loop when downloading the entirety of a
+	dataset.  It checks user_info to find what files have
 	already been downloaded.
 
 	return [min_year, min_month, min_day]
@@ -515,7 +519,7 @@ def min_YMD(min_date, dataset):
 			min_month = ((first_dates[dataset]-min_day)%10000)/100
 			min_year = (first_dates[dataset]-100*min_month-min_day)/10000
 		elif any(re.search(x,dataset) for x in first_date_guesses.keys()):
-			key = [x for x in first_date_guesses.keys() 
+			key = [x for x in first_date_guesses.keys()
 				if re.search(x,dataset)][0]
 			if dataset in first_date_guesses.keys():
 				key = dataset
@@ -535,9 +539,9 @@ def min_YMD(min_date, dataset):
 
 ################################################################################
 def wrds_datevar(filename):
-	"""wrds_datevar(filename) 
-	Different datasets in WRDS use different names for 
-	their date-variables.  wrds_datevar gives the right date 
+	"""wrds_datevar(filename)
+	Different datasets in WRDS use different names for
+	their date-variables.  wrds_datevar gives the right date
 	variable for each dataset.  This may need periodic updating.
 	Crowdsourcing is welcome.
 
@@ -564,8 +568,8 @@ def wrds_datevar(filename):
 
 ################################################################################
 def setup_wrds_key():
-	"""setup_wrds_key() sets up a key-based authentication on 
-	the wrds server, so that the user can log in without a 
+	"""setup_wrds_key() sets up a key-based authentication on
+	the wrds server, so that the user can log in without a
 	password going forward.
 
 	return [ssh, sftp]
@@ -582,7 +586,7 @@ def setup_wrds_key():
 
 ################################################################################
 def get_wrds_institution(ssh, sftp):
-	"""get_wrds_institution(ssh, sftp) gets the institution associated 
+	"""get_wrds_institution(ssh, sftp) gets the institution associated
 	with the user's account on the wrds server.
 
 	return institution_path
