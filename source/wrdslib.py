@@ -483,7 +483,7 @@ def min_YMD(min_date, dataset):
 			min_day += 1
 			try:
 				wday = datetime.date(min_month,min_month,min_day).weekday()
-			except:
+			except ValueError:
 				min_day = 1
 				min_month += 1
 				if min_month == 13:

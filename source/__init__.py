@@ -43,7 +43,7 @@ def setup_pywrds():
 	if not os.path.exists(_pywrds_dir):
 		try:
 			os.mkdir(_pywrds_dir)
-		except:
+		except OSError:
 			print("pywrds was unable to create the directory"
 				+ _pywrds_dir+".  Please create this directory"
 				+ " and re-load pywrds.")

@@ -1,11 +1,11 @@
 """
-pywrds.ectools is the main user interface for pywrds.  The primary 
+pywrds.ectools is the main user interface for pywrds.  The primary
 functions are get_wrds, wrds_loop, and find_wrds.
 
-I recommend that before running get_wrds or wrds_loop 
-to download data, you run wrdslib.setup_wrds_key() 
-to set up key-based authentication.  This will prevent 
-you from needing to enter your password every time 
+I recommend that before running get_wrds or wrds_loop
+to download data, you run wrdslib.setup_wrds_key()
+to set up key-based authentication.  This will prevent
+you from needing to enter your password every time
 the program tries to connect to the WRDS server.
 
 last edit: 2014-08-12
@@ -31,10 +31,10 @@ _institution = wrdslib.wrds_institution
 
 ################################################################################
 def get_numlines_from_log(outfile, dname=_dlpath):
-	"""get_numlines_from_log(outfile, dname=_dlpath) reads the 
-	SAS log file created during get_wrds to find the number of 
-	lines which the wrds server says should be in a downloaded 
-	file "outfile".  This number can then be checked against 
+	"""get_numlines_from_log(outfile, dname=_dlpath) reads the
+	SAS log file created during get_wrds to find the number of
+	lines which the wrds server says should be in a downloaded
+	file "outfile".  This number can then be checked against
 	the number actually found in the file.
 
 	return logfile_lines
@@ -102,28 +102,28 @@ def _rename_after_download():
 def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 	"""get_wrds(dataset, Y=0, M=0, D=0, ssh=[], sftp=[], recombine=1)
 
-	Remotely download a file from the WRDS server. For example, 
-	the command 
-	
-	x = get_wrds('crsp.msf', 2010, 6) 
+	Remotely download a file from the WRDS server. For example,
+	the command
 
-	will log in to the WRDS server, issue a query to generate 
-	a tab-separated(*) file containing the entire CRSP Monthly 
-	Stock File dataset for June 2010, then download that file 
-	to your download_path (which you can edit in the user 
-	information section above).  The output x is a pair 
-	[indicator,elapsed_time] where indicator is a one if the 
+	x = get_wrds('crsp.msf', 2010, 6)
+
+	will log in to the WRDS server, issue a query to generate
+	a tab-separated(*) file containing the entire CRSP Monthly
+	Stock File dataset for June 2010, then download that file
+	to your download_path (which you can edit in the user
+	information section above).  The output x is a pair
+	[indicator,elapsed_time] where indicator is a one if the
 	download was successful, zero otherwise.
 
 	The arguments Y, M, D stand for Year, Month, Day, respectively.
-	Ommitting the month argument 
+	Ommitting the month argument
 
-	get_wrds(dataset_name, year) 
+	get_wrds(dataset_name, year)
 
 	will retrieve a single file for the entire year.
 
-	(*) Tab-separated files (tsv) tend to work slightly 
-	better than comma-separated files (csv) because sometimes 
+	(*) Tab-separated files (tsv) tend to work slightly
+	better than comma-separated files (csv) because sometimes
 	company names have commas e.g. Company Name, Inc.
 
 	return [numfiles, total_rows, ssh, sftp, time_elapsed]
@@ -141,7 +141,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 			[keep_going, ssh, sftp, dt] = _get_wrds_chunk(dataset, Y, M, D, R, ssh, sftp)
 		if keep_going > 0:
 			numfiles += 1
-			if os.path.exists(os.path.join(_dlpath,outfile)):				
+			if os.path.exists(os.path.join(_dlpath,outfile)):
 				log_lines = get_numlines_from_log(outfile, dname=_dlpath)
 				numlines = get_numlines(os.path.join(_dlpath,outfile))
 				if log_lines > numlines:
@@ -151,8 +151,8 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 						+' were expected.')
 					keep_going = 0
 				#elif len(fline.split('\t')) != len(first_line):
-				## log files sometimes have lines like 
-				# "The minimum record length was 34." 
+				## log files sometimes have lines like
+				# "The minimum record length was 34."
 				# "The maximum record length was 58."
 				#	print('get_wrds error: file '+outfile
 				#		+' appears to have been truncated mid-writing.  '
@@ -200,12 +200,12 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	"""_get_wrds_chunk(dataset, Y, M=0, D=0, rows=[], ssh=[], sftp=[])
 
-	Some files requested by get_wrds are too large to fit 
-	in a user's allotted space on the wrds server.  For these 
-	files, get_wrds will split the request into multiple 
+	Some files requested by get_wrds are too large to fit
+	in a user's allotted space on the wrds server.  For these
+	files, get_wrds will split the request into multiple
 	smaller requests to retrieve multiple files and run each
 	of them through _get_wrds_chunk.  If the argument
-	"recombine" is set to its default value of 1, these files 
+	"recombine" is set to its default value of 1, these files
 	will be recombined once the loop completes.
 
 	return [success, ssh, sftp, time_elapsed]
@@ -214,14 +214,14 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
 	if not sftp:
 		return [0, ssh, sftp, time.time()-tic]
-	
+
 	[sas_file, outfile, dataset] = wrdslib.wrds_sas_script(dataset, Y, M, D, R)
 	log_file = re.sub('\.sas$','.log',sas_file)
 
 	put_success = _put_sas_file(ssh, sftp, outfile, sas_file)
-	exit_status = _sas_step(ssh, sftp, sas_file, outfile) 
+	exit_status = _sas_step(ssh, sftp, sas_file, outfile)
 	exit_status = _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file)
-		
+
 	if exit_status in [0, 1]:
 		[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
 		file_list = fdict.keys()
@@ -253,10 +253,10 @@ now = time.localtime()
 [this_year, this_month, today] = [now.tm_year, now.tm_mon, now.tm_mday]
 def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 	"""wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None)
-	executes get_wrds(database_name,...) over all years and 
-	months for which data is available for the specified 
-	data set.  File separated into chunks for downloading 
-	will be recombined into their original forms if 
+	executes get_wrds(database_name,...) over all years and
+	months for which data is available for the specified
+	data set.  File separated into chunks for downloading
+	will be recombined into their original forms if
 	recombine is set to its default value 1.
 
 	return [numfiles, time_elapsed]
@@ -266,7 +266,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 	[numfiles, numlines, numlines0] = [0, 0, 0]
 	[min_year, min_month, min_day] = wrdslib.min_YMD(min_date, dataset)
 	flist = os.listdir(_dlpath)
-		
+
 	if [min_year, min_month, min_day] == [-1, -1, -1]:
 		Y = 'all'
 		get_output = get_wrds(dataset, Y, M=0, D=0, ssh=ssh, sftp=sftp, recombine=recombine)
@@ -277,7 +277,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 		sftp.close()
 		[ssh, sftp] = [[], []]
 		return [numfiles, time.time()-tic]
-	
+
 
 	for ymd in wrdslib.get_ymd_range(min_date, dataset, 1):
 		[Y, M, D] = ymd
@@ -311,15 +311,15 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 
 ################################################################################
 def _put_sas_file(ssh, sftp, outfile, sas_file):
-	"""_put_sas_file(ssh, sftp, outfile, sas_file) puts the sas_file 
-	in the appropriate directory on the wrds server, handling 
-	several common errors that occur during this process.  
+	"""_put_sas_file(ssh, sftp, outfile, sas_file) puts the sas_file
+	in the appropriate directory on the wrds server, handling
+	several common errors that occur during this process.
 
-	It removes old files which may interfere with the new 
-	files and checks that there is enough space in the user 
+	It removes old files which may interfere with the new
+	files and checks that there is enough space in the user
 	account on the wrds server to run the sas command.
-	
-	Finally it checks that the necessary autoexec.sas files 
+
+	Finally it checks that the necessary autoexec.sas files
 	are present in the directory.
 
 	return put_success_boolean
@@ -327,9 +327,9 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
 	initial_files = fdict.values()
 
-	old_export_files = [x for x in initial_files 
-		if re.search('wrds_export.*sas$', x.filename) 
-		or re.search('wrds_export.*log$', x.filename) 
+	old_export_files = [x for x in initial_files
+		if re.search('wrds_export.*sas$', x.filename)
+		or re.search('wrds_export.*log$', x.filename)
 		or x.filename == sas_file]
 	for old_file in old_export_files:
 		try:
@@ -339,7 +339,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 		initial_files.remove(old_file)
 
 	pattern = '[0-9]*rows[0-9]+to[0-9]+\.tsv$'
-	old_outfiles = [x for x in initial_files 
+	old_outfiles = [x for x in initial_files
 		if re.sub(pattern,'',x.filename) == re.sub(pattern,'',outfile)]
 
 	for old_file in old_outfiles:
@@ -364,7 +364,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
 	auto_names = ['autoexec.sas', '.autoexecsas']
 	autoexecs = [x.filename for x in initial_files if x.filename in auto_names]
-	if autoexecs == ['.autoexecsas']: 
+	if autoexecs == ['.autoexecsas']:
 		# if 'autoexec.sas' is not present, the sas program will fail   #
 		# a backup copy is stored by default in .autoexecsas            #
 		ssh_command = 'cp .autoexecsas autoexec.sas'
@@ -406,8 +406,8 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
 ################################################################################
 def _sas_step(ssh, sftp, sas_file, outfile):
-	"""_sas_step(ssh, sftp, sas_file, outfile) wraps the running of 
-	the sas command (_run_sas_command) with retrying and 
+	"""_sas_step(ssh, sftp, sas_file, outfile) wraps the running of
+	the sas command (_run_sas_command) with retrying and
 	re-initializing the network connection if necessary.
 
 	return exit_status
@@ -418,7 +418,7 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 		num_sas_trys += 1
 		sas_completion = 1
 
-		if exit_status in [42, 104]: 
+		if exit_status in [42, 104]:
 			# 42 = network read failed                 #
 			# 104 = connection reset by peer           #
 			sas_completion = 0
@@ -435,7 +435,7 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 			elif log_file in fdict.keys():
 				exit_status = -1
 				sas_completion = 1
-				
+
 	return exit_status
 
 
@@ -444,8 +444,8 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 
 ################################################################################
 def _run_sas_command(ssh, sftp, sas_file, outfile):
-	"""_run_sas_command(ssh, sftp, sas_file, outfile) executes 
-	the sas script sas_file on the wrds server and waits for 
+	"""_run_sas_command(ssh, sftp, sas_file, outfile) executes
+	the sas script sas_file on the wrds server and waits for
 	an exit status to be returned.
 
 	return exit_status
@@ -457,7 +457,7 @@ def _run_sas_command(ssh, sftp, sas_file, outfile):
 	sas_command = ('sas -noterminal '+ sas_file)
 
 	#[success, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _uname)
-	[stdin,stdout,stderr] = ssh.exec_command(sas_command) 
+	[stdin,stdout,stderr] = ssh.exec_command(sas_command)
 	[exit_status, exit_status2, waited, maxwait] = [-1, -1, 0, 1200]
 	while exit_status == -1 and waited < maxwait:
 		time.sleep(10)
@@ -474,15 +474,15 @@ def _run_sas_command(ssh, sftp, sas_file, outfile):
 
 ################################################################################
 def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
-	"""_handle_sas_failure(ssh, sftp, exit_status, outfile, log_file) 
-	checks the sas exit status returned by the wrds server and 
+	"""_handle_sas_failure(ssh, sftp, exit_status, outfile, log_file)
+	checks the sas exit status returned by the wrds server and
 	responds appropriately to any statuses other than success.
 
 	return exit_status
 	"""
 	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
-	if not sftp: 
-		return exit_status 
+	if not sftp:
+		return exit_status
 	## turn the last three lines into a wrapper? ##
 
 	real_failure = 1
@@ -512,14 +512,14 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 			#	sftp.get(outfile, localpath=os.path.join(_dlpath,outfile))
 			#except KeyboardInterrupt:
 			#	raise KeyboardInterrupt
-			#except: ### hacked together ###
+			#except : ### hacked together ###
 			#	print('File download failure.')
 			#	pass
 			#try:
 			#	sftp.remove(outfile)
 			#except KeyboardInterrupt:
 			#	raise KeyboardInterrupt
-			#except:
+			#except :
 			#	print('File removal failure.')
 			#	pass
 
@@ -535,19 +535,19 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 
 ################################################################################
 def _wait_for_sas_file_completion(ssh, sftp, outfile):
-	"""_wait_for_sas_file_completion(ssh, sftp, outfile) checks the size 
-	of the file outfile produced on the wrds server within get_wrds. 
-	Until it observes two successive measurements with the same file 
+	"""_wait_for_sas_file_completion(ssh, sftp, outfile) checks the size
+	of the file outfile produced on the wrds server within get_wrds.
+	Until it observes two successive measurements with the same file
 	size, it infers that the sas script is still writing the file.
 
 	return remote_size
 	"""
 	## add getSSH for the sftp.stat?           ##
 	## i think this may be perfunctory in      ##
-	## the case where exit_status = 0          ## 
+	## the case where exit_status = 0          ##
 	## indicates the process is done, not sure ##
 	[measure1, measure2, mtime, waited2, maxwait2] = [0, 1, time.time(), 0, 1200]
-	while sftp and ((waited2 < maxwait2) 
+	while sftp and ((waited2 < maxwait2)
 		and (measure1 != measure2 or (time.time() - mtime <= 10))):
 		measure1 = measure2
 		time.sleep(10)
@@ -575,8 +575,8 @@ def _wait_for_sas_file_completion(ssh, sftp, outfile):
 
 ################################################################################
 def _retrieve_file(ssh, sftp, outfile, remote_size):
-	"""_retrieve_file(ssh, sftp, outfile, remote_size) retrieves the 
-	file outfile produced on the wrds server in get_wrds, including 
+	"""_retrieve_file(ssh, sftp, outfile, remote_size) retrieves the
+	file outfile produced on the wrds server in get_wrds, including
 	correct handling of several common network errors.
 
 	return retrieve_success_boolean
@@ -631,9 +631,9 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 
 ################################################################################
 def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
-	"""_wait_for_retrieve_completion(outfile, get_success) checks the 
-	size of the downloaded file outfile multiple times and waits for 
-	two successive measurements giving the same file size.  Until 
+	"""_wait_for_retrieve_completion(outfile, get_success) checks the
+	size of the downloaded file outfile multiple times and waits for
+	two successive measurements giving the same file size.  Until
 	this point, it infers that the download is still in progress.
 
 	return local_size
@@ -644,7 +644,7 @@ def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
 	[locmeasure1, locmeasure2, mtime2] = [0, 1, time.time()]
 	write_file = '.'+outfile+'--writing'
 	local_path = os.path.join(os.path.expanduser('~'),write_file)
-	while ((waited3 < maxwait) 
+	while ((waited3 < maxwait)
 		and (locmeasure1 != locmeasure2 or (time.time() - mtime2) <= 10)):
 		locmeasure1 = locmeasure2
 		time.sleep(5)
@@ -668,9 +668,9 @@ def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
 
 ################################################################################
 def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
-	"""_compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size) 
-	compares the size of the file "outfile" downloaded (local_size) to 
-	the size of the file as listed on the server (remote_size) to 
+	"""_compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size)
+	compares the size of the file "outfile" downloaded (local_size) to
+	the size of the file as listed on the server (remote_size) to
 	check that the download completed properly.
 
 	return compare_success_boolean
@@ -710,10 +710,10 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 def _get_log_file(ssh, sftp, log_file, sas_file):
 	"""_get_log_file(log_file, sas_file)
 
-	_get_log_file(log_file, sas_file) attempts to retrieve the SAS 
+	_get_log_file(log_file, sas_file) attempts to retrieve the SAS
 	log file generated by _get_wrds_chunk from the WRDS server.
 
-	_get_log_file also removes the sas_file from the local directory, 
+	_get_log_file also removes the sas_file from the local directory,
 	though strictly speaking this belongs in a separate function.
 
 	return success_boolean
@@ -757,10 +757,10 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 
 ################################################################################
 def find_wrds(filename, ssh=None, sftp=None):
-	"""find_wrds(dataset_name, ssh=None, sftp=None) will query 
-	WRDS for a list of tables available from dataset_name.  For 
-	example, setting dataset_name = 'crsp' returns a file with 
-	a list of names including "dsf" (daily stock file) and 
+	"""find_wrds(dataset_name, ssh=None, sftp=None) will query
+	WRDS for a list of tables available from dataset_name.  For
+	example, setting dataset_name = 'crsp' returns a file with
+	a list of names including "dsf" (daily stock file) and
 	"msf" (monthly stock file).
 
 	return [file_list, ssh, sftp]
@@ -769,13 +769,13 @@ def find_wrds(filename, ssh=None, sftp=None):
 	local_sas_file = os.path.join(_dlpath,'wrds_dicts.sas')
 	fd = open(local_sas_file,'wb')
 	fd.write('\tproc sql;\n')
-	fd.write('\tselect memname\n') 
+	fd.write('\tselect memname\n')
 	# optional: "select distinct memname"   #
 	fd.write('\tfrom dictionary.tables\n')
 	fd.write('\twhere libname = "' + filename.upper() +'";\n')
 	fd.write('\tquit;\n')
 	fd.close()
-	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_uname)
 	for fname in ['wrds_dicts.sas', 'wrds_dicts.lst', 'wrds_dicts.log']:
 		try:
 			sftp.remove(fname)
@@ -793,7 +793,7 @@ def find_wrds(filename, ssh=None, sftp=None):
 	while exit_status == -1:
 		time.sleep(10)
 		exit_status = stdout.channel.recv_exit_status()
-	
+
 	local_path = os.path.join(_dlpath,filename+'_dicts.lst')
 	remote_path = ('/home/'+_institution+'/'+_uname+'/wrds_dicts.lst')
 	[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
@@ -839,9 +839,9 @@ def find_wrds(filename, ssh=None, sftp=None):
 
 ################################################################################
 def _recombine_ready(fname, dname=None, suppress=0):
-	"""_recombine_ready(fname, dname=None, suppress=0) 
-	checks files downloaded by get_wrds to see if the loop 
-	has completed successfully and the files are ready 
+	"""_recombine_ready(fname, dname=None, suppress=0)
+	checks files downloaded by get_wrds to see if the loop
+	has completed successfully and the files are ready
 	to be be recombined.
 
 	If dname==None, the directory defaults to os.getcwd().
@@ -909,8 +909,8 @@ def _recombine_ready(fname, dname=None, suppress=0):
 
 ################################################################################
 def recombine_files(fname, dname=None, suppress=0):
-	"""recombine_files(fname, dname=None, suppress=0) 
-	reads the files downloaded by get_wrds and combines them 
+	"""recombine_files(fname, dname=None, suppress=0)
+	reads the files downloaded by get_wrds and combines them
 	back into the single file of interest.
 
 	If dname==None, the directory defaults to os.getcwd().
@@ -980,7 +980,7 @@ def recombine_files(fname, dname=None, suppress=0):
 
 ################################################################################
 def get_numlines(path2file):
-	"""get_numlines(path2file) reads a textfile located at 
+	"""get_numlines(path2file) reads a textfile located at
 	path2file and returns the number of lines found.
 
 	return numlines
