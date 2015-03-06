@@ -11,6 +11,8 @@ import logging, logging.handlers
 ################################################################################
 #@Todo: Handle BadHostKeyException #
 
+import logging
+logger = logging.getLogger(__name__)
 
 
 ################################################################################
@@ -31,7 +33,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	returns [ssh, sftp]
 	"""
 	if not has_modules['paramiko']:
-		print('sshlib.getSSH is unavailable without dependency "paramiko"'
+		logger.error('sshlib.getSSH is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
 		return [None, None]
 	if sftp:
@@ -118,7 +120,7 @@ def find_ssh_key(make=1):
 		if make == 1:
 			os.makedirs(ssh_dir)
 		else:
-			print('find_ssh_key() no SSH keys found, none created.')
+			logger.warning('find_ssh_key() no SSH keys found, none created.')
 			return None
 	ssh_dirlist = os.listdir(ssh_dir)
 	key_path = os.path.join(ssh_dir,'id_rsa.pub')
@@ -147,7 +149,7 @@ def ssh_keygen():
 	## Bug 2014-08-21: open(...,'wb') appears to cause a OSError 13
 	## on Windows systems.
 	if not has_modules['Crypto.PublicKey.RSA']:
-		print('sshlib.ssh_keygen is unavailable without '
+		logger.warning('sshlib.ssh_keygen is unavailable without '
 			+'dependency "Crypto.PublicKey.RSA".  Returning None.')
 		return None
 
@@ -192,7 +194,7 @@ def ssh_keygen():
 		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir,700)
 	elif 'id_rsa.pub' in ssh_dirlist:
-		print('ssh_keygen() expected the directory '+ssh_dir
+		logger.warning('ssh_keygen() expected the directory '+ssh_dir
 			+' to contain either zero or both of "id_rsa", "id_rsa.pub",'
 			+' but only "id_rsa.pub" was found.  Aborting ssh_keygen on '
 			+'the assumption that this situation is intentional on the '
@@ -224,13 +226,13 @@ def put_ssh_key(domain, username):
 	return [ssh, sftp]
 	"""
 	if not has_modules['paramiko']:
-		print('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
+		logger.warning('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
 		return [None, None]
 
 	key_path = ssh_keygen()
 	if not key_path:
-		print('put_wrds_key() cannot run until the error '
+		logger.warning('put_wrds_key() cannot run until the error '
 			'produced by ssh_keygen() is resolved.')
 		return [None, None]
 
@@ -239,7 +241,7 @@ def put_ssh_key(domain, username):
 	try:
 		ssh.connect(domain, username=username, key_filename=key_path)
 		sftp = ssh.open_sftp()
-		print('key-based authentication is already set up '
+		logger.info('key-based authentication is already set up '
 			+'on the server ' + domain)
 		return [ssh, sftp]
 	except paramiko.AuthenticationException:
@@ -254,11 +256,11 @@ def put_ssh_key(domain, username):
 		raise KeyboardInterrupt
 	except:# paramiko.AuthenticationException:
 		[ssh, sftp] = [None, None]
-		print('paramiko could not connect to the server '+str(domain)
+		logger.error('paramiko could not connect to the server '+str(domain)
 			+' with username '+str(username))
 
 	if not sftp:
-		print('Connection to domain '+domain+' failed, '
+		logger.error('Connection to domain '+domain+' failed, '
 			+'put_ssh_key() returning unsuccessfully')
 		return [ssh, sftp]
 
@@ -278,21 +280,21 @@ def put_ssh_key(domain, username):
 	sftp.close()
 	ssh.close()
 
-	print('SSH key successfully deposited on the '
+	logger.info('SSH key successfully deposited on the '
 		+domain+' server.  Checking that passwordless '
 		+'login works correctly...')
 	try:
 		ssh.connect(domain, username=username, key_filename=key_path)
-		print('Passwordless login was successful.')
+		logger.info('Passwordless login was successful.')
 		sftp = ssh.open_sftp()
 		success = 1
 	except paramiko.AuthenticationException:
 		[error_type, error_value, error_traceback] = sys.exc_info()
-		print('Passwordless login was unsuccessful.  '
+		logger.error('Passwordless login was unsuccessful.  '
 		+ 'Debugging information follows...')
-		print('error_type = '+repr(error_type))
-		print('error_value = '+repr(error_value))
-		print('error_traceback = '+repr(error_traceback))
+		logger.error('error_type = '+repr(error_type))
+		logger.error('error_value = '+repr(error_value))
+		logger.error('error_traceback = '+repr(error_traceback))
 		[ssh, sftp] = [None, None]
 	return [ssh, sftp]
 
@@ -697,7 +699,7 @@ try:
 	import paramiko
 	has_modules['paramiko'] = 1
 except:
-	print('Some pywrds.sshlib'
+	logger.warning('Some pywrds.sshlib'
 		+' functionality requires the package "paramiko".'
 		+'  Please "pip install paramiko".  Otherwise some '
 		+' functionality will be limited.')
@@ -707,7 +709,7 @@ try:
 	import Crypto.PublicKey.RSA
 	has_modules['Crypto.PublicKey.RSA'] = 1
 except:
-	print('Some pywrds.sshlib'
+	logger.warning('Some pywrds.sshlib'
 		+' functionality requires the package "Crypto.PublicKey.RSA".'
 		+'  Please "pip install pycrypto".  Otherwise some '
 		+' functionality will be limited.\n'

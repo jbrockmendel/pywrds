@@ -21,7 +21,6 @@ pywrds.wrds_loop('comp.fundq')
 Data files will download to the pywrds/output directory.  Have fun.
 """
 
-
 thisAlgorithmBecomingSkynetCost = 99999999999
 __all__ = ["ectools", "wrdslib", "wrds_loop", "get_wrds", "find_wrds", "setup_wrds_key"]
 from . import ectools, wrdslib
@@ -35,16 +34,21 @@ find_wrds = ectools.find_wrds
 setup_wrds_key = wrdslib.setup_wrds_key
 
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
+import os
 _pywrds_dir = os.path.join(os.path.expanduser('~'),'.pywrds')
-_user_file = os.path.join(_pwrds_dir,'user_info.txt')
+_user_file = os.path.join(_pywrds_dir,'user_info.txt')
 
 def setup_pywrds():
 	if not os.path.exists(_pywrds_dir):
 		try:
 			os.mkdir(_pywrds_dir)
 		except OSError:
-			print("pywrds was unable to create the directory"
+			logger.error("pywrds was unable to create the directory"
 				+ _pywrds_dir+".  Please create this directory"
 				+ " and re-load pywrds.")
 	if not os.path.exists(_user_file):
