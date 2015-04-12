@@ -1013,7 +1013,7 @@ for module_name in ['paramiko']:
 		exec('import '+module_name)
 		has_modules[module_name] = 1
 	except ImportError:
-		LOGGER.warning('Some '+sys._getframe().f_code.co_filename
+		logger.warning('Some '+sys._getframe().f_code.co_filename
 		+' functionality requires the package "'+module_name
 		+'".  Please "pip install '+module_name+'".  Otherwise some '
 		+sys._getframe().f_code.co_filename
