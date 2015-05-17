@@ -5,15 +5,14 @@ pywrds.ectools is the main user interface for pywrds.  The primary
 functions are get_wrds, wrds_loop, and find_wrds.
 
 I recommend that before running get_wrds or wrds_loop to download data, you
-run wrdslib.setup_wrds_key() to set up key-based authentication.  This will p
-revent you from needing to enter your password every time the program tries
+run wrdslib.setup_wrds_key() to set up key-based authentication.  This will
+prevent you from needing to enter your password every time the program tries
 to connect to the WRDS server.
 
-last edit: 2015-04-12
+last edit: 2015-05-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
-
 import logging
 logger = logging.getLogger(__name__)
 ################################################################################
@@ -30,6 +29,8 @@ _domain = wrdslib.wrds_domain
 _username = wrdslib.wrds_username
 _institution = wrdslib.wrds_institution
 
+now = time.localtime()
+(this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
 
 
 
@@ -104,20 +105,20 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 							+'log_lines = '+str(log_lines))
 					if startrow == 1:
 						subfrom = 'rows1to'+str(rows_per_file)
-						newname = re.sub(subfrom,'',outfile)
-						newp2f = os.path.join(_dlpath,newname)
-						oldp2f = os.path.join(_dlpath,outfile)
-						os.rename(oldp2f,newp2f)
+						newname = re.sub(subfrom, '', outfile)
+						newp2f = os.path.join(_dlpath, newname)
+						oldp2f = os.path.join(_dlpath, outfile)
+						os.rename(oldp2f, newp2f)
 					else:
 						subfrom = 'to'+str(R[-1])
 						subto   = 'to'+str(R[0]-1+numlines)
-						newname = re.sub(subfrom,subto,outfile)
-						oldp2f  = os.path.join(_dlpath,outfile)
-						newp2f  = os.path.join(_dlpath,newname)
-						os.rename(oldp2f,newp2f)
+						newname = re.sub(subfrom, subto, outfile)
+						oldp2f  = os.path.join(_dlpath, outfile)
+						newp2f  = os.path.join(_dlpath, newname)
+						os.rename(oldp2f, newp2f)
 					if recombine == 1:
 						subfrom = 'rows[0-9]*to[0-9]*\.tsv'
-						recombine_name = re.sub(subfrom,'',outfile)
+						recombine_name = re.sub(subfrom, '', outfile)
 						recombine_files(recombine_name, dname=_dlpath)
 				else:
 					startrow += rows_per_file
@@ -140,7 +141,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 def get_numlines_from_log(outfile, dname=_dlpath):
 	"""get_numlines_from_log(outfile, dname=_dlpath)
 
-	reads the SAS log file created during get_wrds to find the number of lines
+	Reads the SAS log file created during get_wrds to find the number of lines
 	which the wrds server says should be in a downloaded file "outfile".  This
 	number can then be checked against the number actually found in the file.
 
@@ -202,6 +203,7 @@ def get_numlines_from_log(outfile, dname=_dlpath):
 
 
 def _rename_after_download():
+	raise NotImplementedError
 	return
 
 
@@ -228,12 +230,12 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	log_file = re.sub('\.sas$','.log',sas_file)
 
 	put_success = _put_sas_file(ssh, sftp, outfile, sas_file)
-	### if not put_success: ...
+	# @TODO: if not put_success: ...
 	exit_status = _sas_step(ssh, sftp, sas_file, outfile)
 	exit_status = _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file)
 
 	if exit_status in [0, 1]:
-		[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _username)
+		(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 		file_list = fdict.keys()
 		#file_list = sftp.listdir()
 		if outfile not in file_list:
@@ -259,16 +261,16 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 
 
 ################################################################################
-now = time.localtime()
-[this_year, this_month, today] = [now.tm_year, now.tm_mon, now.tm_mday]
 def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 	"""wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None)
 
-	Executes get_wrds(database_name,...) over all years and
-	months for which data is available for the specified
-	data set.  File separated into chunks for downloading
-	will be recombined into their original forms if
-	recombine is set to its default value 1.
+	Executes:
+
+	get_wrds(database_name,...)
+
+	over all years and months for which data is available for the specified
+	data set.  File separated into chunks for downloading will be recombined
+	into their original forms if recombine is set to its default value 1.
 
 	return (numfiles, time_elapsed)
 	"""
@@ -286,7 +288,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 			numfiles = numfiles + 1
 		ssh.close()
 		sftp.close()
-		[ssh, sftp] = [[], []]
+		(ssh, sftp) = ([], [])
 		return (numfiles, time.time()-tic)
 
 
@@ -327,12 +329,12 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	Puts the sas_file in the appropriate directory on the wrds server, handling
 	several common errors that occur during this process.
 
-	It removes old files which may interfere with the new
-	files and checks that there is enough space in the user
-	account on the wrds server to run the sas command.
+	It removes old files which may interfere with the new files and checks that
+	there is enough space in the user account on the wrds server to run the sas
+	command.
 
-	Finally it checks that the necessary autoexec.sas files
-	are present in the directory.
+	Finally it checks that the necessary autoexec.sas files are present in the
+	directory.
 
 	return put_success_boolean
 	"""
@@ -366,7 +368,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	file_sizes = [initial_file.st_size for initial_file in initial_files]
 	total_file_size = sum(file_sizes)
 	if total_file_size > 5*10**8:
-		MBs = int(float(total_file_size)/1000000)
+		MBs = int(float(total_file_size)/1000000.)
 		logger.info.write('You are using approximately '+str(MBs)
 			+ ' megabytes of your 1 GB'
 			+ ' quota on the WRDS server.  This may cause '
@@ -1030,7 +1032,7 @@ def get_numlines(path2file):
 	fsize = os.stat(fd.name).st_size
 	numlines = 0
 	first_line = fd.readline().split('\t')
-	while fd.tell()<fsize:
+	while fd.tell() < fsize:
 		fline = fd.readline()
 		numlines += 1
 	fd.close()
