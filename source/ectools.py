@@ -235,6 +235,8 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	exit_status = _sas_step(ssh, sftp, sas_file, outfile)
 	exit_status = _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file)
 
+	(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
+
 	if exit_status in [0, 1]:
 		(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 		file_list = fdict.keys()
@@ -251,7 +253,7 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 			local_size = _wait_for_retrieve_completion(outfile, get_success)
 			compare_success = _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size)
 
-	(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
+	#(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
 	checkfile = os.path.join(_dlpath,outfile)
 	if os.path.exists(checkfile) or exit_status == 0:
 		return (1, ssh, sftp, time.time()-tic)
@@ -402,8 +404,8 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	auto_names = ['autoexec.sas', '.autoexecsas']
 	autoexecs  = [x.filename for x in initial_files if x.filename in auto_names]
 	if autoexecs == ['.autoexecsas']:
-		# if 'autoexec.sas' is not present, the sas program will fail   #
-		# a backup copy is stored by default in .autoexecsas            #
+		# if 'autoexec.sas' is not present, the sas program will fail         #
+		# a backup copy is stored by default in wrds_parameters.autoexec_text #
 		ssh_command = 'cp .autoexecsas autoexec.sas'
 		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command,
 																	ssh,
@@ -411,7 +413,6 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 																	_domain,
 																	_username
 																	)
-		#ssh.exec_command('cp .autoexecsas autoexec.sas')
 	elif autoexecs == ['autoexec.sas']:
 		ssh_command = 'cp autoexec.sas .autoexecsas'
 		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command,
@@ -420,7 +421,6 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 																	_domain,
 																	_username
 																	)
-		#ssh.exec_command('cp autoexec.sas .autoexecsas')
 	elif autoexecs == []:
 		fd = open('autoexec.sas','wb')
 		fd.write(wrdslib.autoexec_text)
@@ -434,7 +434,6 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 										_domain,
 										_username
 										)
-		#sftp.put('autoexec.sas','autoexec.sas')## try ##
 		ssh_command = 'cp autoexec.sas .autoexecsas'
 		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command,
 																	ssh,
@@ -442,21 +441,11 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 																	_domain,
 																	_username
 																	)
-		#ssh.exec_command('cp autoexec.sas .autoexecsas')
 		os.remove('autoexec.sas')
 
 	local_path = os.path.join(_dlpath, sas_file)
 	remote_path = sas_file
 	(put_success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, _domain, _username)
-	#[put_success, numtrys, max_trys] = [0, 0, 3]
-	#while put_success == 0 and numtrys < max_trys:
-	#	try:
-	#		sftp.put(local_path, sas_file)
-	#		put_success = 1
-	#	except (paramiko.SSHException,IOError,EOFError):
-	#		[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_username)
-	#		numtrys += 1
-
 	return put_success
 
 
@@ -516,7 +505,7 @@ def _run_sas_command(ssh, sftp, sas_file, outfile):
 
 	sas_command = 'sas -noterminal '+ sas_file
 
-	#[success, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _username)
+	#(success, stdin, stdout, stderr, ssh, sftp) = _try_exec(sas_command, ssh, sftp, _domain, _username)
 	(stdin, stdout, stderr) = ssh.exec_command(sas_command)
 	[exit_status, exit_status2, waited, maxwait] = [-1, -1, 0, 1200]
 	while exit_status == -1 and waited < maxwait:
@@ -554,7 +543,7 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 		fd = sftp.file(log_file)
 		logcontent = fd.read()
 		fd.close()
-		if re.search('error: file .* does not exist.',logcontent,flags=re.I):
+		if re.search('error: file .* does not exist.', logcontent, flags=re.I):
 			real_failure = 0
 
 	if exit_status not in [0, 1] and real_failure == 1:
@@ -563,7 +552,8 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 		if outfile in fdict.keys():
 			logger.error('SAS is apparently returning an incorrect '
 				+ 'exit status: '+str(exit_status)+', '+outfile+'.  '
-				+'ectools is downloading the file for user inspection.')
+				+'ectools is downloading the file for user inspection.'
+				)
 			remote_path = outfile
 			local_path = os.path.join(_dlpath,outfile)
 			(get_success, ssh, sftp, dt) = _try_get(ssh,
@@ -592,8 +582,9 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 
 		else:
 			logger.error('get_wrds failed on file "'+outfile+'"\n'
-				+'exit_status = '+str(exit_status)+'\n'
-				+'For details, see log file "'+log_file+'"')
+				+ 'exit_status = '+str(exit_status)+'\n'
+				+ 'For details, see log file "'+log_file+'"'
+				)
 
 	return exit_status
 
@@ -798,8 +789,8 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 def _get_log_file(ssh, sftp, log_file, sas_file):
 	"""_get_log_file(log_file, sas_file)
 
-	_get_log_file(log_file, sas_file) attempts to retrieve the SAS
-	log file generated by _get_wrds_chunk from the WRDS server.
+	Attempt to retrieve the SAS log file generated by _get_wrds_chunk from
+	the WRDS server.
 
 	_get_log_file also removes the sas_file from the local directory,
 	though strictly speaking this belongs in a separate function.
@@ -816,10 +807,6 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 										remote_path=remote_path,
 										local_path=local_path
 										)
-	#try:
-	#	sftp.get(remotepath=remote_path, localpath=local_path)
-	#except IOError,EOFError:
-	#	success = 0
 	cmd = 'rm '+sas_file
 	(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(cmd,
 																ssh,
@@ -827,7 +814,6 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 																_domain,
 																_username
 																)
-	#[stdin, stdout, stderr] = ssh.exec_command('rm ' + sas_file)
 	cmd = 'rm wrds_export*'
 	(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(cmd,
 																ssh,
@@ -835,9 +821,8 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 																_domain,
 																_username
 																)
-	#[stdin, stdout, stderr] = ssh.exec_command('rm wrds_export*')
 
-	saspath = os.path.join(_dlpath,sas_file)
+	saspath = os.path.join(_dlpath, sas_file)
 	if os.path.exists(saspath):
 		os.remove(saspath)
 	return (success, ssh, sftp)
