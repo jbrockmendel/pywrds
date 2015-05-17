@@ -331,7 +331,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	sas_file = sas_file + '.sas'
 
 	(dataset, output_file) = fix_input_name(dataset, Y, M, D, R)
-	fd = open(os.path.join(download_path,sas_file),'wb')
+	fd = open(os.path.join(download_path, sas_file), 'wb')
 	fd.write('DATA new_data;\n')
 	fd.write('\tSET '+dataset)
 	if Y != 'all':

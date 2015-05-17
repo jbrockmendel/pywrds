@@ -33,6 +33,7 @@ now = time.localtime()
 (this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
 
 
+# @TODO: Sub-directories for storing log and SAS files.
 
 ################################################################################
 def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
@@ -1110,7 +1111,7 @@ def recombine_files(fname, dname=None, suppress=0):
 
 	if found_problem == 0:
 		for fname1 in flist:
-			os.remove(os.path.join(dname,fname1))
+			os.remove(os.path.join(dname, fname1))
 	return combined_files
 
 ################################################################################
