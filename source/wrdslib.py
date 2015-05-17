@@ -83,12 +83,13 @@ def check_quota(ssh):
 	Check how much of your account's storage quota on the WRDS server
 	is full.
 
-	Output variables (usage, quota, limit) are in kilobytes, default to None
-	if the remote command "quota -v" is unsuccessful.
+	Output variables (usage, quota, limit) are in kilobytes.  If the "quota -v"
+	command is unsuccessful, "usage" and "limit" defualt to None, and "quota"
+	defaults to 2^30 (1 GB).
 
 	return (usage, quota, limit)
 	"""
-	(usage, quota, limit) = (None, None, None)
+	(usage, quota, limit) = (None, 2**30, None)
 	(stdin, stdout, stderr) = ssh.exec_command('quota -v')
 	(slept, exit_status, max_sleep) = (0, None, 3)
 	while exit_status == None and slept < max_sleep:
@@ -119,6 +120,11 @@ def check_quota(ssh):
 			limit = int(limit)
 		except ValueError:
 			pass
+
+	else:
+		# Fall back to manually checking the sum size of files in the user
+		# directory.
+		pass
 	return (usage, quota, limit)
 
 

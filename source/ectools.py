@@ -254,7 +254,7 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 			compare_success = _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size)
 
 	#(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
-	checkfile = os.path.join(_dlpath,outfile)
+	checkfile = os.path.join(_dlpath, outfile)
 	if os.path.exists(checkfile) or exit_status == 0:
 		return (1, ssh, sftp, time.time()-tic)
 	return (0, ssh, sftp, time.time()-tic)
@@ -319,13 +319,13 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 
 		numfiles = numfiles + new_files
 		wrdslib.update_user_info(numfiles,
-							new_files,
-							fname=outfile,
-							dataset=dataset,
-							year=Y,
-							month=M,
-							day=D
-							)
+								new_files,
+								fname=outfile,
+								dataset=dataset,
+								year=Y,
+								month=M,
+								day=D
+								)
 
 	return (numfiles, time.time()-tic)
 
@@ -388,6 +388,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 		initial_files.remove(old_file)
 		## see if the file is something you                ##
 		## actually want before deleting it out of hand    ##
+
 
 	file_sizes = [initial_file.st_size for initial_file in initial_files]
 	total_file_size = sum(file_sizes)
