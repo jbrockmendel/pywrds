@@ -1,18 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-pywrds.sshlib is essentially a wrapper around paramiko for
-interacting with remote servers via SSH and SFTP.  Nothing
-in sshlib is specific to WRDS.
+pywrds.sshlib is essentially a wrapper around paramiko for interacting with
+remote servers via SSH and SFTP.  Nothingvin sshlib is specific to WRDS.
 
 last edit: 2014-08-21
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
-import logging, logging.handlers
-################################################################################
-#@Todo: Handle BadHostKeyException #
-
 import logging
 logger = logging.getLogger(__name__)
+################################################################################
+#@Todo: Handle BadHostKeyException #
 
 
 ################################################################################
@@ -30,12 +29,12 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	assumes it is being run as part of a script and skips
 	the password step.
 
-	returns [ssh, sftp]
+	return (ssh, sftp)
 	"""
 	if not has_modules['paramiko']:
 		logger.error('sshlib.getSSH is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
-		return [None, None]
+		return (None, None)
 	if sftp:
 		try:
 			pwd = sftp.getcwd()
@@ -50,7 +49,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt
 		except:
-			ssh = None
+			ssh  = None
 			sftp = None
 	if not ssh:
 		ssh = paramiko.SSHClient()
@@ -83,16 +82,16 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 						+str(username))
 					break
 			except (paramiko.SSHException,socket.error):
-				[error_type, error_value, error_traceback] = sys.exc_info()
+				(error_type, error_value, error_traceback) = sys.exc_info()
 				if port == ports[-1]:
 					ssh = None
 					default_logger.error(print_func()+' '
-						+error_type.__module__+'.'+error_type.__name__
-						+': paramiko could not connect to '
-						+'the server '+str(domain))
+						+ error_type.__module__+'.'+error_type.__name__
+						+ ': paramiko could not connect to '
+						+ 'the server '+str(domain))
 	if sftp:
 		pwd = sftp.getcwd()
-	return [ssh, sftp]
+	return (ssh, sftp)
 
 
 
@@ -223,18 +222,18 @@ def put_ssh_key(domain, username):
 	the proper permissions before logging out and testing
 	the new connection.
 
-	return [ssh, sftp]
+	return (ssh, sftp)
 	"""
 	if not has_modules['paramiko']:
 		logger.warning('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
 			+'  Returning [None, None].')
-		return [None, None]
+		return (None, None)
 
 	key_path = ssh_keygen()
 	if not key_path:
 		logger.warning('put_wrds_key() cannot run until the error '
 			'produced by ssh_keygen() is resolved.')
-		return [None, None]
+		return (None, None)
 
 	ssh = paramiko.SSHClient()
 	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -243,7 +242,7 @@ def put_ssh_key(domain, username):
 		sftp = ssh.open_sftp()
 		logger.info('key-based authentication is already set up '
 			+'on the server ' + domain)
-		return [ssh, sftp]
+		return (ssh, sftp)
 	except paramiko.AuthenticationException:
 		[ssh, sftp] = [None, None]
 
@@ -255,14 +254,14 @@ def put_ssh_key(domain, username):
 	except KeyboardInterrupt:
 		raise KeyboardInterrupt
 	except:# paramiko.AuthenticationException:
-		[ssh, sftp] = [None, None]
+		(ssh, sftp) = [None, None]
 		logger.error('paramiko could not connect to the server '+str(domain)
 			+' with username '+str(username))
 
 	if not sftp:
 		logger.error('Connection to domain '+domain+' failed, '
 			+'put_ssh_key() returning unsuccessfully')
-		return [ssh, sftp]
+		return (ssh, sftp)
 
 	remote_list = sftp.listdir()
 	if '.ssh' not in remote_list:
@@ -273,7 +272,7 @@ def put_ssh_key(domain, username):
 	else:
 		sftp.put(key_path, 'authorized_keys-temp')
 		cat_cmd = 'cat authorized_keys-temp >> .ssh/authorized_keys'
-		[stdin, stdout, stderr] = ssh.exec_command(cat_cmd)
+		(stdin, stdout, stderr) = ssh.exec_command(cat_cmd)
 
 	sftp.chmod('.ssh/authorized_keys',600)
 	sftp.chmod('.ssh',700)
@@ -291,12 +290,12 @@ def put_ssh_key(domain, username):
 	except paramiko.AuthenticationException:
 		[error_type, error_value, error_traceback] = sys.exc_info()
 		logger.error('Passwordless login was unsuccessful.  '
-		+ 'Debugging information follows...')
-		logger.error('error_type = '+repr(error_type))
-		logger.error('error_value = '+repr(error_value))
-		logger.error('error_traceback = '+repr(error_traceback))
+			+ 'Debugging information follows...\n'
+			+ 'error_type='+str(error_type)+'\n'
+			+ 'error_value='+str(error_value)+'\n'
+			+ 'error_traceback='+str(error_traceback))
 		[ssh, sftp] = [None, None]
-	return [ssh, sftp]
+	return (ssh, sftp)
 
 
 
@@ -343,18 +342,18 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
 	a larger file size and a more recent modification time, the
 	function returns successfully.
 
-	return [ssh, sftp, success, time_elapsed]
+	return (ssh, sftp, success, time_elapsed)
 	"""
 	tic = time.time()
 	[success, num_trys, max_trys] = [0, 0, 3]
-	[dname, fname] = os.path.split(local_path)
+	(dname, fname) = os.path.split(local_path)
 
-	[ssh, sftp, go_on, success] = _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
+	(ssh, sftp, go_on, success) = _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
 	if not go_on:
-		return [ssh, sftp, success, time.time()-tic]
+		return (ssh, sftp, success, time.time()-tic)
 
-	[success, ssh, sftp] = _try_put(local_path, remote_path, ssh, sftp, domain, username, ports)
-	return [ssh, sftp, success, time.time()-tic]
+	(success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, domain, username, ports)
+	return (ssh, sftp, success, time.time()-tic)
 
 
 
@@ -367,7 +366,7 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 	Trys to sftp the file at local_path on the server at
 	remote_path, reinitiating the ssh connection if needbe.
 
-	return [ssh, sftp, success]
+	return (ssh, sftp, success)
 	"""
 	[success, numtrys, maxtrys] = [0, 0 ,3]
 	local_stat = os.stat(local_path)
@@ -383,13 +382,13 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 				pass
 			raise KeyboardInterrupt
 		except (IOError,EOFError,paramiko.SSHException):
-			[ssh, sftp] = getSSH(ssh, sftp, domain, username, ports)
+			(ssh, sftp) = getSSH(ssh, sftp, domain, username, ports)
 			try:
 				sftp.remove(remote_path)
 			except (IOError,EOFError,paramiko.SSHException):
 				pass
 		numtrys += 1
-	return [success, ssh, sftp]
+	return (success, ssh, sftp)
 
 
 
@@ -431,10 +430,10 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 	In all other cases, the function returns go_on=1,
 	success=0.
 
-	return [ssh, sftp, go_on, success]
+	return (ssh, sftp, go_on, success)
 	"""
 	if not os.path.exists(local_path):
-		return [ssh, sftp, 0, 0]
+		return (ssh, sftp, 0, 0)
 
 	local_stat = os.stat(local_path)
 	time_diff = time.time() - local_stat.st_mtime
@@ -446,7 +445,7 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 		waits += 1
 
 	if waits == max_waits:
-		return [ssh, sftp, 0, 0]
+		return (ssh, sftp, 0, 0)
 
 	try:
 		remote_stat = sftp.stat(remote_path)
@@ -464,16 +463,16 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 			waits += 1
 
 		if waits == max_waits:
-			return [ssh, sftp, 0, 0]
+			return (ssh, sftp, 0, 0)
 
 		if remote_stat.st_size == local_stat.st_size:
-			return [ssh, sftp, 0, 1]
+			return (ssh, sftp, 0, 1)
 
 		if (remote_stat.st_mtime > local_stat.st_mtime
 			and remote_stat.st_size > local_stat.st_size):
-			return [ssh, sftp, 0, 1]
+			return (ssh, sftp, 0, 1)
 
-	return [ssh, sftp, 1, 0]
+	return (ssh, sftp, 1, 0)
 
 
 
@@ -493,7 +492,7 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 	the local_path is not already in use, or that there is enough
 	space free on the local disk to complete the download.
 
-	return [success_boolean, time_elapsed]
+	return (success_boolean, time_elapsed)
 	"""
 	tic = time.time()
 	[success, numtrys, maxtrys] = [0, 0, 3]
@@ -504,14 +503,14 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 		except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
 			if os.path.exists(local_path):
 				os.remove(local_path)
-			[ssh, sftp] = getSSH(ssh, sftp, domain=domain, username=username)
+			(ssh, sftp) = getSSH(ssh, sftp, domain=domain, username=username)
 			numtrys += 1
 		except KeyboardInterrupt:
 			if os.path.exists(local_path):
 				os.remove(local_path)
 			raise KeyboardInterrupt
 
-	return [success, ssh, sftp, time.time()-tic]
+	return (success, ssh, sftp, time.time()-tic)
 
 
 
@@ -532,7 +531,7 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 	Creates a dictionary fdict = {filename: [attributes]} across
 	the files in the remote directory.
 
-	returns [ssh, sftp, fdict]
+	returns (ssh, sftp, fdict)
 	"""
 	fdict = {}
 	remote_list = []
@@ -542,11 +541,11 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 			remote_list = sftp.listdir_attr(remote_dir)
 			success=1
 		except (IOError,EOFError,paramiko.SSHException):
-			[ssh, sftp] = getSSH(ssh, sftp, domain, username, ports)
+			(ssh, sftp) = getSSH(ssh, sftp, domain, username, ports)
 			numtrys += 1
 
 	fdict = {x.filename: x for x in remote_list}
-	return [ssh, sftp, fdict]
+	return (ssh, sftp, fdict)
 
 
 
@@ -563,7 +562,7 @@ def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
 	an indicator which is True if the stats are found, and False,
 	otherwise (usually indicating the file does not exist).
 
-	returns [ssh, sftp, remote_size, exists_boolean]
+	returns (ssh, sftp, remote_size, exists_boolean)
 	"""
 	stats = None
 	[success, numtrys, maxtrys] = [0, 0, 3]
@@ -572,10 +571,10 @@ def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
 			stats = sftp.stat(remote_path)
 			success = 1
 		except (IOError,EOFError,paramiko.SSHException):
-			[ssh, sftp] = getSSH(ssh, sftp, domain, username, ports)
+			(ssh, sftp) = getSSH(ssh, sftp, domain, username, ports)
 			numtrys += 1
 
-	return [ssh, sftp, stats, success]
+	return (ssh, sftp, stats, success)
 
 
 
@@ -589,13 +588,13 @@ def _try_exec(command, ssh, sftp, domain, username, ports=[22]):
 	[stdin, stdout, stderr] = [None, None, None]
 	while not success and numtrys < maxtrys:
 		try:
-			[stdin, stdout, stderr] = ssh.exec_command(command)
+			(stdin, stdout, stderr) = ssh.exec_command(command)
 			success = 1
 		except (IOError,EOFError,paramiko.SSHException):
-			[ssh, sftp] = getSSH(ssh, sftp, domain=domain, username=username)
-			numtrys +=1
+			(ssh, sftp) = getSSH(ssh, sftp, domain=domain, username=username)
+			numtrys += 1
 
-	return [success, stdin, stdout, stderr, ssh, sftp]
+	return (success, stdin, stdout, stderr, ssh, sftp)
 
 
 
@@ -616,7 +615,7 @@ def print_func(level=1):
 
 	return module.function
 	"""
-	module_name = sys._getframe(level).f_code.co_filename.split('/')[-1][:-3]
+	module_name   = sys._getframe(level).f_code.co_filename.split('/')[-1][:-3]
 	function_name = sys._getframe(level).f_code_co_name
 	return module_name +'.'+ function_name
 
@@ -647,6 +646,7 @@ def timeout_decorator(timeout_time, default):
 	A function decorated with timeout_decorator(timeout_time,default)
 	either finished within "timeout_time" seconds or will exit and
 	return "default".
+
 	Copied with minor alterations from
 	http://pguides.net/python-tutorial/python-timeout-a-function/
 
@@ -702,7 +702,8 @@ except:
 	logger.warning('Some pywrds.sshlib'
 		+' functionality requires the package "paramiko".'
 		+'  Please "pip install paramiko".  Otherwise some '
-		+' functionality will be limited.')
+		+' functionality will be limited.'
+	)
 	has_modules['paramiko'] = 0
 
 try:

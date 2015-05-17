@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 For detailed usage instructions, see the readme.txt file included with the
 pywrds distribution.  For the reading-averse, do the following:
@@ -22,7 +24,15 @@ Data files will download to the pywrds/output directory.  Have fun.
 """
 
 thisAlgorithmBecomingSkynetCost = 99999999999
-__all__ = ["ectools", "wrdslib", "wrds_loop", "get_wrds", "find_wrds", "setup_wrds_key"]
+__all__ = [
+	"ectools",
+	"wrdslib",
+	"wrds_loop",
+	"get_wrds",
+	"find_wrds",
+	"setup_wrds_key",
+	"user_info"
+	]
 from . import ectools, wrdslib
 
 try: import simplejson as json
@@ -32,6 +42,7 @@ get_wrds = ectools.get_wrds
 wrds_loop = ectools.wrds_loop
 find_wrds = ectools.find_wrds
 setup_wrds_key = wrdslib.setup_wrds_key
+user_info = wrdslib.user_info
 
 
 import logging
@@ -40,8 +51,8 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 import os
-_pywrds_dir = os.path.join(os.path.expanduser('~'),'.pywrds')
-_user_file = os.path.join(_pywrds_dir,'user_info.txt')
+_pywrds_dir = os.path.join(os.path.expanduser('~'), '.pywrds')
+_user_file = os.path.join(_pywrds_dir, 'user_info.txt')
 
 def setup_pywrds():
 	if not os.path.exists(_pywrds_dir):

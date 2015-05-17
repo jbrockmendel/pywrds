@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 pywrds.ectools is the main user interface for pywrds.  The primary
 functions are get_wrds, wrds_loop, and find_wrds.
@@ -7,10 +9,13 @@ run wrdslib.setup_wrds_key() to set up key-based authentication.  This will p
 revent you from needing to enter your password every time the program tries
 to connect to the WRDS server.
 
-last edit: 2014-08-12
+last edit: 2015-04-12
 """
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
+
+import logging
+logger = logging.getLogger(__name__)
 ################################################################################
 from . import sshlib, wrdslib
 
@@ -22,11 +27,112 @@ _try_listdir = sshlib._try_listdir
 
 _dlpath = wrdslib.download_path
 _domain = wrdslib.wrds_domain
-_uname = wrdslib.wrds_username
+_username = wrdslib.wrds_username
 _institution = wrdslib.wrds_institution
 
-import logging
-logger = logging.getLogger(__name__)
+
+
+
+################################################################################
+def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
+	"""get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1)
+
+	Remotely download a file from the WRDS server. For example, the command:
+
+	x = get_wrds('crsp.msf', 2010, 6)
+
+	will log in to the WRDS server, issue a query to generate a
+	tab-separated(*) file containing the entire CRSP Monthly Stock File dataset
+	for June 2010, then download that file to your download_path (which you can
+	edit in the user information section above).  The output x is a pair
+	(indicator, elapsed_time) where indicator is a one if the download was
+	successful, zero otherwise.
+
+	The arguments Y, M, D stand for Year, Month, Day, respectively.
+	Ommitting the month argument:
+
+	get_wrds(dataset_name, year)
+
+	will retrieve a single file for the entire year.
+
+	(*) Tab-separated files (tsv) tend to work slightly better than
+	comma-separated files (csv) because sometimes company names have commas
+	e.g. Company Name, Inc.
+
+	return (numfiles, total_rows, ssh, sftp, time_elapsed)
+	"""
+	keep_going = 1
+	[startrow, numfiles, total_rows, tic] = [1, 0, 0, time.time()]
+	rows_per_file = wrdslib.rows_per_file_adjusted(dataset)
+	(dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
+	if os.path.exists(os.path.join(_dlpath, outfile)):
+		keep_going = 0
+	while keep_going:
+		R = [startrow, startrow-1+rows_per_file]
+		(dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, R)
+		if not os.path.exists(os.path.join(_dlpath, outfile)):
+			(keep_going, ssh, sftp, dt) = _get_wrds_chunk(dataset, Y, M, D, R, ssh, sftp)
+		if keep_going > 0:
+			numfiles += 1
+			if os.path.exists(os.path.join(_dlpath,outfile)):
+				log_lines = get_numlines_from_log(outfile, dname=_dlpath)
+				numlines = get_numlines(os.path.join(_dlpath,outfile))
+				if log_lines > numlines:
+					logger.error('get_wrds error: file '
+						+outfile+' has '+ str(numlines)
+						+' lines, but '+ str(log_lines)
+						+' were expected.')
+					keep_going = 0
+				#elif len(fline.split('\t')) != len(first_line):
+				## log files sometimes have lines like
+				# "The minimum record length was 34."
+				# "The maximum record length was 58."
+				#	print('get_wrds error: file '+outfile
+				#		+' appears to have been truncated mid-writing.  '
+				#		+' The final line has fewer '
+				#		+'columns than the first line.')
+				#	keep_going = 0
+
+				total_rows += numlines
+				if numlines < rows_per_file:
+					keep_going = 0
+
+				if log_lines == numlines < rows_per_file:
+					keep_going = 0
+					if not (log_lines == -1 or log_lines == numlines):
+						logger.warning('get_wrds warning: '
+							+'log_lines = '+str(log_lines))
+					if startrow == 1:
+						subfrom = 'rows1to'+str(rows_per_file)
+						newname = re.sub(subfrom,'',outfile)
+						newp2f = os.path.join(_dlpath,newname)
+						oldp2f = os.path.join(_dlpath,outfile)
+						os.rename(oldp2f,newp2f)
+					else:
+						subfrom = 'to'+str(R[-1])
+						subto   = 'to'+str(R[0]-1+numlines)
+						newname = re.sub(subfrom,subto,outfile)
+						oldp2f  = os.path.join(_dlpath,outfile)
+						newp2f  = os.path.join(_dlpath,newname)
+						os.rename(oldp2f,newp2f)
+					if recombine == 1:
+						subfrom = 'rows[0-9]*to[0-9]*\.tsv'
+						recombine_name = re.sub(subfrom,'',outfile)
+						recombine_files(recombine_name, dname=_dlpath)
+				else:
+					startrow += rows_per_file
+					newname = outfile
+
+			else:
+				keep_going = 0
+
+	return (numfiles, total_rows, ssh, sftp, time.time()-tic)
+
+
+
+
+
+
 
 
 
@@ -100,102 +206,6 @@ def _rename_after_download():
 
 
 ################################################################################
-def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
-	"""get_wrds(dataset, Y=0, M=0, D=0, ssh=[], sftp=[], recombine=1)
-
-	Remotely download a file from the WRDS server. For example, the command:
-
-	x = get_wrds('crsp.msf', 2010, 6)
-
-	will log in to the WRDS server, issue a query to generate a
-	tab-separated(*) file containing the entire CRSP Monthly Stock File dataset
-	for June 2010, then download that file to your download_path (which you can
-	edit in the user information section above).  The output x is a pair
-	(indicator, elapsed_time) where indicator is a one if the download was
-	successful, zero otherwise.
-
-	The arguments Y, M, D stand for Year, Month, Day, respectively.
-	Ommitting the month argument:
-
-	get_wrds(dataset_name, year)
-
-	will retrieve a single file for the entire year.
-
-	(*) Tab-separated files (tsv) tend to work slightly better than
-	comma-separated files (csv) because sometimes company names have commas
-	e.g. Company Name, Inc.
-
-	return (numfiles, total_rows, ssh, sftp, time_elapsed)
-	"""
-	keep_going = 1
-	[startrow, numfiles, total_rows, tic] = [1, 0, 0, time.time()]
-	rows_per_file = wrdslib.rows_per_file_adjusted(dataset)
-	[dset2, outfile] = wrdslib.fix_input_name(dataset, Y, M, D, [])
-	if os.path.exists(os.path.join(_dlpath,outfile)):
-		keep_going = 0
-	while keep_going:
-		R = [startrow, startrow-1+rows_per_file]
-		[dset2, outfile] = wrdslib.fix_input_name(dataset, Y, M, D, R)
-		if not os.path.exists(os.path.join(_dlpath,outfile)):
-			[keep_going, ssh, sftp, dt] = _get_wrds_chunk(dataset, Y, M, D, R, ssh, sftp)
-		if keep_going > 0:
-			numfiles += 1
-			if os.path.exists(os.path.join(_dlpath,outfile)):
-				log_lines = get_numlines_from_log(outfile, dname=_dlpath)
-				numlines = get_numlines(os.path.join(_dlpath,outfile))
-				if log_lines > numlines:
-					logger.error('get_wrds error: file '
-						+outfile+' has '+ str(numlines)
-						+' lines, but '+ str(log_lines)
-						+' were expected.')
-					keep_going = 0
-				#elif len(fline.split('\t')) != len(first_line):
-				## log files sometimes have lines like
-				# "The minimum record length was 34."
-				# "The maximum record length was 58."
-				#	print('get_wrds error: file '+outfile
-				#		+' appears to have been truncated mid-writing.  '
-				#		+' The final line has fewer '
-				#		+'columns than the first line.')
-				#	keep_going = 0
-
-				total_rows += numlines
-				if numlines < rows_per_file:
-					keep_going = 0
-
-				if log_lines == numlines < rows_per_file:
-					keep_going = 0
-					if not (log_lines == -1 or log_lines == numlines):
-						logger.warning('get_wrds warning: '
-							+'log_lines = '+str(log_lines))
-					if startrow == 1:
-						subfrom = 'rows1to'+str(rows_per_file)
-						newname = re.sub(subfrom,'',outfile)
-						newp2f = os.path.join(_dlpath,newname)
-						oldp2f = os.path.join(_dlpath,outfile)
-						os.rename(oldp2f,newp2f)
-					else:
-						subfrom = 'to'+str(R[-1])
-						subto = 'to'+str(R[0]-1+numlines)
-						newname = re.sub(subfrom,subto,outfile)
-						oldp2f = os.path.join(_dlpath,outfile)
-						newp2f = os.path.join(_dlpath,newname)
-						os.rename(oldp2f,newp2f)
-					if recombine == 1:
-						subfrom = 'rows[0-9]*to[0-9]*\.tsv'
-						recombine_name = re.sub(subfrom,'',outfile)
-						recombine_files(recombine_name, dname=_dlpath)
-				else:
-					startrow += rows_per_file
-					newname = outfile
-
-			else:
-				keep_going = 0
-
-	return (numfiles, total_rows, ssh, sftp, time.time()-tic)
-
-
-################################################################################
 def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	"""_get_wrds_chunk(dataset, Y, M=0, D=0, rows=[], ssh=[], sftp=[])
 
@@ -210,19 +220,20 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	return (success, ssh, sftp, time_elapsed)
 	"""
 	tic = time.time()
-	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	if not sftp:
 		return (0, ssh, sftp, time.time()-tic)
 
-	[sas_file, outfile, dataset] = wrdslib.wrds_sas_script(dataset, Y, M, D, R)
+	(sas_file, outfile, dataset) = wrdslib.wrds_sas_script(dataset, Y, M, D, R)
 	log_file = re.sub('\.sas$','.log',sas_file)
 
 	put_success = _put_sas_file(ssh, sftp, outfile, sas_file)
+	### if not put_success: ...
 	exit_status = _sas_step(ssh, sftp, sas_file, outfile)
 	exit_status = _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file)
 
 	if exit_status in [0, 1]:
-		[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
+		[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _username)
 		file_list = fdict.keys()
 		#file_list = sftp.listdir()
 		if outfile not in file_list:
@@ -233,11 +244,11 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 
 		else:
 			remote_size = _wait_for_sas_file_completion(ssh, sftp, outfile)
-			[get_success, dt] = _retrieve_file(ssh, sftp, outfile, remote_size)
+			(get_success, dt) = _retrieve_file(ssh, sftp, outfile, remote_size)
 			local_size = _wait_for_retrieve_completion(outfile, get_success)
 			compare_success = _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size)
 
-	[got_log, ssh, sftp] = _get_log_file(ssh, sftp, log_file, sas_file)
+	(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
 	checkfile = os.path.join(_dlpath,outfile)
 	if os.path.exists(checkfile) or exit_status == 0:
 		return (1, ssh, sftp, time.time()-tic)
@@ -262,7 +273,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 	return (numfiles, time_elapsed)
 	"""
 	tic = time.time()
-	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	[numfiles, numlines, numlines0] = [0, 0, 0]
 	(min_year, min_month, min_day) = wrdslib.min_YMD(min_date, dataset)
 	flist = os.listdir(_dlpath)
@@ -270,7 +281,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 	if [min_year, min_month, min_day] == [-1, -1, -1]:
 		Y = 'all'
 		get_output = get_wrds(dataset, Y, M=0, D=0, ssh=ssh, sftp=sftp, recombine=recombine)
-		[new_files, total_lines, ssh, sftp, dt] = get_output
+		(new_files, total_lines, ssh, sftp, dt) = get_output
 		if new_files > 0:
 			numfiles = numfiles + 1
 		ssh.close()
@@ -281,7 +292,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 
 	for ymd in wrdslib.get_ymd_range(min_date, dataset, 1):
 		[Y, M, D] = ymd
-		[dset2, outfile] = wrdslib.fix_input_name(dataset, Y, M, D, [])
+		(dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
 		if outfile in flist:
 			continue
 		get_output = get_wrds(dataset, Y, M=M, D=D, ssh=ssh, sftp=sftp, recombine=recombine)
@@ -325,7 +336,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
 	return put_success_boolean
 	"""
-	[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
+	(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 	initial_files = fdict.values()
 
 	old_export_files = [x for x in initial_files
@@ -341,7 +352,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
 	pattern = '[0-9]*rows[0-9]+to[0-9]+\.tsv$'
 	old_outfiles = [x for x in initial_files
-		if re.sub(pattern,'',x.filename) == re.sub(pattern,'',outfile)]
+		if re.sub(pattern,'',x.filename) == re.sub(pattern, '', outfile)]
 
 	for old_file in old_outfiles:
 		try:
@@ -357,23 +368,24 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	if total_file_size > 5*10**8:
 		MBs = int(float(total_file_size)/1000000)
 		logger.info.write('You are using approximately '+str(MBs)
-			+' megabytes of your 1 GB'
-			+' quota on the WRDS server.  This may cause '
-			+'ectools.get_wrds to operate'
-			+' incorrectly.  The files present are: ')
+			+ ' megabytes of your 1 GB'
+			+ ' quota on the WRDS server.  This may cause '
+			+ 'ectools.get_wrds to operate'
+			+ ' incorrectly.  The files present are: '
+			)
 		logger.info.write([x.filename for x in initial_files])
 
 	auto_names = ['autoexec.sas', '.autoexecsas']
-	autoexecs = [x.filename for x in initial_files if x.filename in auto_names]
+	autoexecs  = [x.filename for x in initial_files if x.filename in auto_names]
 	if autoexecs == ['.autoexecsas']:
 		# if 'autoexec.sas' is not present, the sas program will fail   #
 		# a backup copy is stored by default in .autoexecsas            #
 		ssh_command = 'cp .autoexecsas autoexec.sas'
-		[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(ssh_command, ssh, sftp, _domain, _uname)
+		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command, ssh, sftp, _domain, _username)
 		#ssh.exec_command('cp .autoexecsas autoexec.sas')
 	elif autoexecs == ['autoexec.sas']:
 		ssh_command = 'cp autoexec.sas .autoexecsas'
-		[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(ssh_command, ssh, sftp, _domain, _uname)
+		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command, ssh, sftp, _domain, _username)
 		#ssh.exec_command('cp autoexec.sas .autoexecsas')
 	elif autoexecs == []:
 		fd = open('autoexec.sas','wb')
@@ -381,23 +393,23 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 		fd.close()
 		local_path = 'autoexec.sas'
 		remote_path = 'autoexec.sas'
-		[put_success, ssh, sftp] = _try_put(local_path, remote_path, ssh, sftp, _domain, _uname)
+		(put_success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, _domain, _username)
 		#sftp.put('autoexec.sas','autoexec.sas')## try ##
 		ssh_command = 'cp autoexec.sas .autoexecsas'
-		[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(ssh_command, ssh, sftp, _domain, _uname)
+		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec(ssh_command, ssh, sftp, _domain, _username)
 		#ssh.exec_command('cp autoexec.sas .autoexecsas')
 		os.remove('autoexec.sas')
 
-	local_path = os.path.join(_dlpath,sas_file)
+	local_path = os.path.join(_dlpath, sas_file)
 	remote_path = sas_file
-	[put_success, ssh, sftp] = _try_put(local_path, remote_path, ssh, sftp, _domain, _uname)
+	(put_success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, _domain, _username)
 	#[put_success, numtrys, max_trys] = [0, 0, 3]
 	#while put_success == 0 and numtrys < max_trys:
 	#	try:
 	#		sftp.put(local_path, sas_file)
 	#		put_success = 1
 	#	except (paramiko.SSHException,IOError,EOFError):
-	#		[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	#		[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_username)
 	#		numtrys += 1
 
 	return put_success
@@ -424,11 +436,11 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 			# 42 = network read failed                 #
 			# 104 = connection reset by peer           #
 			sas_completion = 0
-			[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+			(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 			if not sftp:
 				return exit_status
 
-			[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
+			(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 			#file_list = sftp.listdir()
 			if outfile in fdict.keys():
 				exit_status = 0
@@ -453,14 +465,14 @@ def _run_sas_command(ssh, sftp, sas_file, outfile):
 
 	return exit_status
 	"""
-	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	if not sftp:
 		return -1
 
 	sas_command = ('sas -noterminal '+ sas_file)
 
-	#[success, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _uname)
-	[stdin,stdout,stderr] = ssh.exec_command(sas_command)
+	#[success, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _username)
+	(stdin, stdout, stderr) = ssh.exec_command(sas_command)
 	[exit_status, exit_status2, waited, maxwait] = [-1, -1, 0, 1200]
 	while exit_status == -1 and waited < maxwait:
 		time.sleep(10)
@@ -484,14 +496,14 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 
 	return exit_status
 	"""
-	[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	if not sftp:
 		return exit_status
 	## turn the last three lines into a wrapper? ##
 
 	real_failure = 1
 
-	[ssh, sftp, fdict] = _try_listdir('.', ssh, sftp, _domain, _uname)
+	(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 	#file_list = sftp.listdir()
 	if exit_status == 2 and log_file in fdict.keys():
 		fd = sftp.file(log_file)
@@ -509,7 +521,7 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 				+'ectools is downloading the file for user inspection.')
 			remote_path = outfile
 			local_path = os.path.join(_dlpath,outfile)
-			(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_uname, remote_path=remote_path, local_path=local_path)
+			(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_username, remote_path=remote_path, local_path=local_path)
 			if get_success == 0:
 				logger.warning('File download failure.')
 			#try:
@@ -562,7 +574,7 @@ def _wait_for_sas_file_completion(ssh, sftp, outfile):
 			measure2 = output_stat.st_size
 			mtime = output_stat.st_mtime
 		except (IOError,EOFError,paramiko.SSHException):
-			[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
+			[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_username)
 
 
 	if waited2 >= maxwait2:
@@ -604,27 +616,27 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 		return (0, time.time()-tic)
 
 	[get_success, numtrys, maxtrys] = [0, 0, 3]
-	remote_path = ('/home/'+_institution+'/'+_uname+'/'+outfile)
+	remote_path = ('/home/'+_institution+'/'+_username+'/'+outfile)
 	write_file = '.'+outfile+'--writing'
 	local_path = os.path.join(os.path.expanduser('~'),write_file)
-	[get_success, ssh, sftp, dt] = _try_get(ssh, sftp, domain=_domain, username=_uname, remote_path=remote_path, local_path=local_path)
-	#while get_success == 0 and numtrys < maxtrys:
-	#	try:
-	#		sftp.get(remotepath=remote_path, localpath=local_path)
-	#		get_success = 1
-	#	except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
-	#		if os.path.exists(local_path):
-	#			os.remove(local_path)
-	#		[ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_uname)
-	#		numtrys += 1
-	#	except KeyboardInterrupt:
-	#		if os.path.exists(local_path):
-	#			os.remove(local_path)
-	#		raise KeyboardInterrupt
+	#(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_username, remote_path=remote_path, local_path=local_path)
+	while get_success == 0 and numtrys < maxtrys:
+		try:
+			sftp.get(remotepath=remote_path, localpath=local_path)
+			get_success = 1
+		except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
+			if os.path.exists(local_path):
+				os.remove(local_path)
+			(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
+			numtrys += 1
+		except KeyboardInterrupt:
+			if os.path.exists(local_path):
+				os.remove(local_path)
+			raise KeyboardInterrupt
 
-	logger.info('retrieve_file: '+repr(outfile)
+	logger.info('retrieve_file: '+str(outfile)
 		+' ('+repr(remote_size)+' bytes) '
-		+' time elapsed='+repr(time.time()-tic))
+		+' time elapsed='+str(time.time()-tic))
 
 	return (get_success, time.time()-tic)
 
@@ -687,9 +699,9 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 	write_file = '.'+outfile+'--writing'
 	local_path = os.path.join(os.path.expanduser('~'),write_file)
 	if remote_size == local_size != 0:
-		[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec('rm ' + outfile, ssh, sftp, _domain, _uname)
+		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec('rm ' + outfile, ssh, sftp, _domain, _username)
 		#[stdin, stdout, stderr] = ssh.exec_command('rm ' + outfile)
-		to_path = os.path.join(_dlpath,outfile)
+		to_path = os.path.join(_dlpath, outfile)
 		shutil.move(local_path, to_path)
 		comare_success = 1
 
@@ -700,8 +712,8 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 			logger.info('The error appears to involve '
 				+'the download stopping at 2^'+str(log_size)+' bytes.')
 		error_file = '.'+outfile+'--size_error'
-		from_file = os.path.join(os.path.expanduser('~'),error_file)
-		to_file = os.path.join(_dlpath,outfile)
+		from_file = os.path.join(os.path.expanduser('~'), error_file)
+		to_file = os.path.join(_dlpath, outfile)
 		shutil.move(from_file, to_file)
 		compare_success = 0
 
@@ -727,16 +739,16 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 	return success_boolean
 	"""
 	success = 1
-	remote_path = ('/home/'+_institution+'/'+_uname+'/'+log_file)
+	remote_path = '/home/'+_institution+'/'+_username+'/'+log_file
 	local_path = os.path.join(_dlpath,log_file)
-	[success, ssh, sftp, dt] = _try_get(ssh, sftp, domain=_domain, username=_uname, remote_path=remote_path, local_path=local_path)
+	(success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_username, remote_path=remote_path, local_path=local_path)
 	#try:
 	#	sftp.get(remotepath=remote_path, localpath=local_path)
 	#except IOError,EOFError:
 	#	success = 0
-	[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec('rm ' + sas_file, ssh, sftp, _domain, _uname)
+	(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec('rm ' + sas_file, ssh, sftp, _domain, _username)
 	#[stdin, stdout, stderr] = ssh.exec_command('rm ' + sas_file)
-	[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec('rm wrds_export*', ssh, sftp, _domain, _uname)
+	(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec('rm wrds_export*', ssh, sftp, _domain, _username)
 	#[stdin, stdout, stderr] = ssh.exec_command('rm wrds_export*')
 
 	saspath = os.path.join(_dlpath,sas_file)
@@ -764,7 +776,19 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 
 
 ################################################################################
-def find_wrds(filename, ssh=None, sftp=None):
+
+
+
+def find_wrds_options(ssh=None, sftp=None):
+	"""find_wrds_options(ssh=None, sftp=None)
+
+	Find a list of datasets available in wrds, valid arguments to the find_wrds
+	function.
+
+	return (dataset_list, ssh, sftp)
+	"""
+
+def find_wrds(dataset_name, ssh=None, sftp=None):
 	"""find_wrds(dataset_name, ssh=None, sftp=None)
 
 	Will query WRDS for a list of tables available from dataset_name.  For
@@ -774,16 +798,16 @@ def find_wrds(filename, ssh=None, sftp=None):
 	return (file_list, ssh, sftp)
 	"""
 	tic = time.time()
-	local_sas_file = os.path.join(_dlpath,'wrds_dicts.sas')
+	local_sas_file = os.path.join(_dlpath, 'wrds_dicts.sas')
 	fd = open(local_sas_file,'wb')
 	fd.write('\tproc sql;\n')
 	fd.write('\tselect memname\n')
 	# optional: "select distinct memname"   #
 	fd.write('\tfrom dictionary.tables\n')
-	fd.write('\twhere libname = "' + filename.upper() +'";\n')
+	fd.write('\twhere libname = "' + dataset_name.upper() +'";\n')
 	fd.write('\tquit;\n')
 	fd.close()
-	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_uname)
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	for fname in ['wrds_dicts.sas', 'wrds_dicts.lst', 'wrds_dicts.log']:
 		try:
 			sftp.remove(fname)
@@ -792,27 +816,34 @@ def find_wrds(filename, ssh=None, sftp=None):
 		except:
 			pass
 
-	[put_success, ssh, sftp] = _try_put(local_sas_file, 'wrds_dicts.sas', ssh, sftp, _domain, _uname)
+	(put_success, ssh, sftp) = _try_put(local_sas_file, 'wrds_dicts.sas', ssh, sftp, _domain, _username)
 	#sftp.put(local_sas_file,'wrds_dicts.sas')
 	sas_command = 'sas -noterminal wrds_dicts.sas'
-	#[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _uname)
+	#[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _username)
 	(stdin, stdout, stderr) = ssh.exec_command(sas_command)
 	exit_status = -1
 	while exit_status == -1:
 		time.sleep(10)
 		exit_status = stdout.channel.recv_exit_status()
 
-	local_path = os.path.join(_dlpath,filename+'_dicts.lst')
-	remote_path = ('/home/'+_institution+'/'+_uname+'/wrds_dicts.lst')
-	(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _uname)
+	local_path = os.path.join(_dlpath, dataset_name+'_dicts.lst')
+	remote_path = '/home/'+_institution+'/'+_username+'/wrds_dicts.lst'
+	(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 	remote_list = fdict.keys()
 	#remote_list = sftp.listdir()
 	if exit_status in [0, 1] and 'wrds_dicts.lst' in remote_list:
 		#sftp.get(remotepath=remote_path, localpath=local_path)
-		(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_uname, remote_path=remote_path, local_path=local_path)
+		(get_success, ssh, sftp, dt) = _try_get(
+												ssh,
+												sftp,
+												domain=_domain,
+												username=_username,
+												remote_path=remote_path,
+												local_path=local_path
+												)
 	else:
 		logger.warning('find_wrds did not generate a wrds_dicts.lst '
-			+'file for input: '+repr(filename))
+			+'file for input: '+str(dataset_name))
 	try:
 		sftp.remove('wrds_dicts.sas')
 	except (IOError,EOFError,paramiko.SSHException):
@@ -831,7 +862,7 @@ def find_wrds(filename, ssh=None, sftp=None):
 			dnum = dash_line[0]
 			flist = flist[dnum:]
 
-
+	flist = [x for x in flist if x.strip(' -') != '']
 	return (flist, ssh, sftp)
 ################################################################################
 
@@ -868,10 +899,10 @@ def _recombine_ready(fname, dname=None, suppress=0):
 	flist0 = os.listdir(dname)
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]
 	flist0 = [x for x in flist0 if re.search(fname0,x)]
-	fdict = {x: x.split('rows')[-1] for x in flist0}
-	fdict = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
-	fdict= {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
-	flist = [[fdict[x],x] for x in fdict]
+	fdict  = {x: x.split('rows')[-1] for x in flist0}
+	fdict  = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
+	fdict  = {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
+	flist  = [[fdict[x],x] for x in fdict]
 
 	if isready and flist == []:
 		isready = 0
@@ -937,14 +968,14 @@ def recombine_files(fname, dname=None, suppress=0):
 
 	flist0 = [x for x in os.listdir(dname) if re.search(fname0,x)]
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]
-	fdict = {x: x.split('rows')[-1] for x in flist0}
-	fdict = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
-	fdict = {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
-	flist = [[fdict[x], x] for x in fdict]
+	fdict  = {x: x.split('rows')[-1] for x in flist0}
+	fdict  = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
+	fdict  = {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
+	flist  = [[fdict[x], x] for x in fdict]
 
 	flist = [x[1] for x in sorted(flist)]
 	fd = open(os.path.join(dname, flist[-1]),'rb')
-	fsize = os.stat(fd.name).st_size
+	fsize  = os.stat(fd.name).st_size
 	nlines = 0
 	while fd.tell() > fsize:
 		fd.readline()
@@ -1010,14 +1041,15 @@ def get_numlines(path2file):
 has_modules = {}
 for module_name in ['paramiko']:
 	try:
-		exec('import '+module_name)
+		exec('import '+module_name) ## dont use exec!
 		has_modules[module_name] = 1
 	except ImportError:
 		logger.warning('Some '+sys._getframe().f_code.co_filename
-		+' functionality requires the package "'+module_name
-		+'".  Please "pip install '+module_name+'".  Otherwise some '
-		+sys._getframe().f_code.co_filename
-		+' functionality will be limited.')
+			+ ' functionality requires the package "'+module_name
+			+ '".  Please "pip install '+module_name+'".  Otherwise some '
+			+ sys._getframe().f_code.co_filename
+			+ ' functionality will be limited.'
+		)
 		has_modules[module_name] = 0
 
 

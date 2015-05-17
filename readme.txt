@@ -1,7 +1,7 @@
 # Setup instructions for “pywrds”
 # Brock Mendel
 # jbrockmendel@gmail.com
-# Last Update: 2014-08-24
+# Last Update: 2015-04-12
 
 
 I) How To Use This Document

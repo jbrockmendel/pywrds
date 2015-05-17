@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 pywrds.wrdslib is a collection of functions used by ectools
 which use or provide information specific to the WRDS SAS
@@ -6,7 +8,7 @@ system.
 last edit: 2014-08-13
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
-import datetime, os, re, sys, time
+import datetime, os, re, stat, sys, time
 
 try: import simplejson as json
 except ImportError: import json
@@ -30,10 +32,12 @@ user_info_filename = os.path.join(user_path,'user_info.txt')
 if os.path.exists(user_info_filename):
 	fd = open(user_info_filename,'r') # r instead of rb for Python3 compatibility #
 	content = fd.read()
-	content = content.replace(u'\xe2\x80\x9c',u'"')
-	content = content.replace(u'\xe2\x80\x9d',u'"')
+	content = content.replace(u'\xe2\x80\x9c', u'"')
+	content = content.replace(u'\xe2\x80\x9d', u'"')
+	# Fix "smart" quotes sometimes inserted by text editors.
 	try:
-		user_info = json.loads(content)
+		new_user_info = json.loads(content)
+		user_info.update(new_user_info)
 	except ValueError:
 		logger.warning('pywrds.wrdslib warning: user_info.txt file does not '
 			+ 'conform to json format.  Please address this '
@@ -51,7 +55,7 @@ else:
 
 
 ################################################################################
-download_path = os.path.join(user_path,'output')
+download_path = os.path.join(user_path, 'output')
 if 'download_path' in user_info:
 	download_path = user_info['download_path']
 
@@ -181,6 +185,66 @@ dataset_list = [
 
 
 
+
+
+def check_quota(ssh):
+	"""check_quota(ssh)
+
+	Check how much of your account's storage quota on the WRDS server
+	is full.
+
+	Output variables (usage, quota, limit) are in kilobytes, default to None
+	if the remote command "quota -v" is unsuccessful.
+
+	return (usage, quota, limit)
+	"""
+	(usage, quota, limit) = (None, None, None)
+	(stdin, stdout, stderr) = ssh.exec_command('quota -v')
+	(slept, exit_status, max_sleep) = (0, None, 3)
+	while exit_status == None and slept < max_sleep:
+		time.sleep(1)
+		slept += 1
+		exit_status = stdout.channel.recv_exit_status()
+
+	if exit_status == 0:
+		output = stdout.read()
+		flines = output.splitlines()
+		split_lines = [re.split(' +', x.strip()) for x in flines]
+		assert len(split_lines) >= 3 ## don't actually do it like this
+
+		#assert len(split_lines[1]) == len(split_lines[2])
+		#fdict = {split_lines[1][n]: split_lines[2][n] for n in range(len(split_lines[1]))}
+
+		assert split_lines[1][1:4] == ('usage', 'quota', 'limit')
+		(usage, quota, limit) = split_lines[2][1:4]
+		try:
+			usage = int(usage)
+		except ValueError:
+			pass
+		try:
+			quota = int(quota)
+		except ValueError:
+			pass
+		try:
+			limit = int(limit)
+		except ValueError:
+			pass
+	return (usage, quota, limit)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ################################################################################
 def rows_per_file_adjusted(dataset):
 	"""rows_per_file_adjusted(dataset)
@@ -218,7 +282,7 @@ def get_ymd_range(min_date, dataset, weekdays=1):
 
 	return ymdrange
 	"""
-	[min_year, min_month, min_day] = min_YMD(min_date, dataset)
+	(min_year, min_month, min_day) = min_YMD(min_date, dataset)
 
 	ymdrange = []
 	years = xrange(min_year,now.tm_year+1)
@@ -342,7 +406,7 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 		rowstr = 'rows'+str(R[0])+'to'+str(R[1])+'.tsv'
 		output_file = re.sub('.tsv$','',output_file) + rowstr
 
-	return [dataset, output_file]
+	return (dataset, output_file)
 
 
 
@@ -352,7 +416,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	generates a .sas file which is executed on the WRDS server
 	to produce the desired dataset.
 
-	return [sas_file, output_file, dataset]
+	return (sas_file, output_file, dataset)
 	"""
 	tic = time.time()
 	[Y, M, D, R] = [year, month, day, rows]
@@ -369,7 +433,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 		sas_file = sas_file + ymdstr
 	sas_file = sas_file + '.sas'
 
-	[dataset, output_file] = fix_input_name(dataset, Y, M, D, R)
+	(dataset, output_file) = fix_input_name(dataset, Y, M, D, R)
 	fd = open(os.path.join(download_path,sas_file),'wb')
 	fd.write('DATA new_data;\n')
 	fd.write('\tSET '+dataset)
@@ -401,12 +465,19 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	fd.write('\n')
 	fd.write('proc export data = new_data\n')
 	fd.write(('\toutfile = "~/'+output_file+'" \n'
-	+'\tdbms = tab \n'
-	+'\treplace; \n'
-	+'\tputnames = yes; \n'
-	+'run; \n'))
+		+'\tdbms = tab \n'
+		+'\treplace; \n'
+		+'\tputnames = yes; \n'
+		+'run; \n')
+	)
 	fd.close()
-	return [sas_file, output_file, dataset]
+
+	os.chmod(fd.name,
+		(stat.S_IRUSR + stat.S_IWUSR + stat.S_IXUSR
+		+ stat.S_IRGRP + stat.S_IWGRP + stat.S_IXGRP
+		+ stat.S_IROTH + stat.S_IWOTH + stat.S_IXOTH)
+		)
+	return (sas_file, output_file, dataset)
 ################################################################################
 
 
@@ -536,13 +607,14 @@ def min_YMD(min_date, dataset):
 			min_month = 0
 			min_year = 1880
 
-	return [min_year, min_month, min_day]
+	return (min_year, min_month, min_day)
 ################################################################################
 
 
 ################################################################################
 def wrds_datevar(filename):
 	"""wrds_datevar(filename)
+
 	Different datasets in WRDS use different names for
 	their date-variables.  wrds_datevar gives the right date
 	variable for each dataset.  This may need periodic updating.
@@ -575,15 +647,15 @@ def setup_wrds_key():
 	the wrds server, so that the user can log in without a
 	password going forward.
 
-	return [ssh, sftp]
+	return (ssh, sftp)
 	"""
 	if not wrds_username:
 		logger.warning('setup_wrds_key() cannot run until wrds_username is '
 			+'specified in the user_info.txt file.')
-		return [None, None]
-	[ssh, sftp] = sshlib.put_ssh_key(domain=wrds_domain, username=wrds_username)
+		return (None, None)
+	(ssh, sftp) = sshlib.put_ssh_key(domain=wrds_domain, username=wrds_username)
 	institution = get_wrds_institution(ssh, sftp)
-	return [ssh, sftp]
+	return (ssh, sftp)
 
 
 
@@ -594,7 +666,7 @@ def get_wrds_institution(ssh, sftp):
 
 	return institution_path
 	"""
-	[ssh, sftp] = sshlib.getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username)
+	(ssh, sftp) = sshlib.getSSH(ssh, sftp, domain=wrds_domain, username=wrds_username)
 	if not sftp:
 		return None
 	try:
