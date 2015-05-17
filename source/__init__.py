@@ -24,6 +24,7 @@ Data files will download to the pywrds/output directory.  Have fun.
 """
 
 thisAlgorithmBecomingSkynetCost = 99999999999
+
 __all__ = [
 	"ectools",
 	"wrdslib",
@@ -61,9 +62,10 @@ def setup_pywrds():
 		except OSError:
 			logger.error("pywrds was unable to create the directory"
 				+ _pywrds_dir+".  Please create this directory"
-				+ " and re-load pywrds.")
+				+ " and re-load pywrds."
+				)
 	if not os.path.exists(_user_file):
-		fd = open(_user_file,'wb') ## permissions ??## lock??##
+		fd = open(_user_file, 'wb') ## permissions ?? ## lock??##
 		fd.write('{}')
 		fd.close()
 		fd.user_info = {}
@@ -74,6 +76,11 @@ def setup_pywrds():
 			fd.user_info = json.loads(content)
 		except ValueError:
 			fd.user_info = {}
+			logger.error("user_info file "+_user_file+ " does not appear"
+				+ " to conform to JSON format and could not be read.  Please"
+				+ " edit this file for future use.  In the interim, user_info"
+				+ " is being set to default values."
+				)
 	return fd
 
 
