@@ -54,6 +54,12 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	if not ssh:
 		ssh = paramiko.SSHClient()
 		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+		handler = logging.StreamHandler()
+        transport = ssh.get_transport()
+        logger = transport.logger
+        logger.addHandler(handler)
+
 		key_filename = find_ssh_key(0)
 		for port in ports:
 			try:
