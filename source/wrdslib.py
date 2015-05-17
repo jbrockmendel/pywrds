@@ -687,7 +687,8 @@ def get_wrds_institution(ssh, sftp):
 				+ 'match the directory "'+institution_path+'" '
 				+ 'found on the wrds server.  '
 				+ 'This mismatch may cause errors '
-				+ 'in the download process.')
+				+ 'in the download process.'
+			)
 	return institution_path
 
 
