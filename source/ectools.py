@@ -607,7 +607,7 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 	if remote_size >= 10**7:
 		# skip messages for small files        #
 		logger.info('starting retrieve_file: '+outfile
-			+' ('+repr(remote_size)+') bytes')
+			+' ('+str(remote_size)+') bytes')
 
 	vfs = os.statvfs(_dlpath)
 	free_local_space = vfs.f_bavail*vfs.f_frsize
@@ -620,25 +620,26 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 	[get_success, numtrys, maxtrys] = [0, 0, 3]
 	remote_path = ('/home/'+_institution+'/'+_username+'/'+outfile)
 	write_file = '.'+outfile+'--writing'
-	local_path = os.path.join(os.path.expanduser('~'),write_file)
-	#(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_username, remote_path=remote_path, local_path=local_path)
-	while get_success == 0 and numtrys < maxtrys:
-		try:
-			sftp.get(remotepath=remote_path, localpath=local_path)
-			get_success = 1
-		except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
-			if os.path.exists(local_path):
-				os.remove(local_path)
-			(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
-			numtrys += 1
-		except KeyboardInterrupt:
-			if os.path.exists(local_path):
-				os.remove(local_path)
-			raise KeyboardInterrupt
+	local_path = os.path.join(os.path.expanduser('~'), write_file)
+	(get_success, ssh, sftp, dt) = _try_get(ssh, sftp, domain=_domain, username=_username, remote_path=remote_path, local_path=local_path)
+	#while get_success == 0 and numtrys < maxtrys:
+	#	try:
+	#		sftp.get(remotepath=remote_path, localpath=local_path)
+	#		get_success = 1
+	#	except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
+	#		if os.path.exists(local_path):
+	#			os.remove(local_path)
+	#		(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
+	#		numtrys += 1
+	#	except KeyboardInterrupt:
+	#		if os.path.exists(local_path):
+	#			os.remove(local_path)
+	#		raise KeyboardInterrupt
 
 	logger.info('retrieve_file: '+str(outfile)
-		+' ('+repr(remote_size)+' bytes) '
-		+' time elapsed='+str(time.time()-tic))
+		+ ' ('+str(remote_size)+' bytes) '
+		+ ' time elapsed='+str(time.time()-tic)
+		)
 
 	return (get_success, time.time()-tic)
 
@@ -675,6 +676,7 @@ def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
 		mtime2 = local_stat.st_mtime
 
 	if waited3 >= maxwait:
+		# @ TODO: "step 3" is not an informative statement.
 		logger.warning('get_wrds stopped waiting for SAS completion at step 3',
 			locmeasure1, locmeasure2, mtime2)
 		locmeasure1 = 0
@@ -699,7 +701,7 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 	"""
 	compare_success = 0
 	write_file = '.'+outfile+'--writing'
-	local_path = os.path.join(os.path.expanduser('~'),write_file)
+	local_path = os.path.join(os.path.expanduser('~'), write_file)
 	if remote_size == local_size != 0:
 		(exec_succes, stdin, stdout, stderr, ssh, sftp) = _try_exec('rm ' + outfile, ssh, sftp, _domain, _username)
 		#[stdin, stdout, stderr] = ssh.exec_command('rm ' + outfile)
@@ -708,11 +710,14 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 		comare_success = 1
 
 	elif local_size != 0:
-		logger.error('remote_size != local_size '+outfile+': '+str(remote_size)+' vs '+str(local_size))
+		logger.error('remote_size!=local_size '
+			+outfile+': '+str(remote_size)+' vs '+str(local_size)
+			)
 		log_size = math.log(local_size,2)
 		if log_size == int(log_size):
 			logger.info('The error appears to involve '
-				+'the download stopping at 2^'+str(log_size)+' bytes.')
+				+'the download stopping at 2^'+str(log_size)+' bytes.'
+				)
 		error_file = '.'+outfile+'--size_error'
 		from_file = os.path.join(os.path.expanduser('~'), error_file)
 		to_file = os.path.join(_dlpath, outfile)
@@ -778,9 +783,6 @@ def _get_log_file(ssh, sftp, log_file, sas_file):
 
 
 ################################################################################
-
-
-
 def find_wrds_options(ssh=None, sftp=None):
 	"""find_wrds_options(ssh=None, sftp=None)
 
@@ -789,6 +791,8 @@ def find_wrds_options(ssh=None, sftp=None):
 
 	return (dataset_list, ssh, sftp)
 	"""
+	raise NotImplementedError
+	return
 
 def find_wrds(dataset_name, ssh=None, sftp=None):
 	"""find_wrds(dataset_name, ssh=None, sftp=None)
@@ -801,21 +805,21 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 	"""
 	tic = time.time()
 	local_sas_file = os.path.join(_dlpath, 'wrds_dicts.sas')
-	fd = open(local_sas_file,'wb')
-	fd.write('\tproc sql;\n')
-	fd.write('\tselect memname\n')
-	# optional: "select distinct memname"   #
-	fd.write('\tfrom dictionary.tables\n')
-	fd.write('\twhere libname = "' + dataset_name.upper() +'";\n')
-	fd.write('\tquit;\n')
-	fd.close()
+	with open(local_sas_file, 'wb') as fd:
+		fd.write('\tproc sql;\n')
+		fd.write('\tselect memname\n')
+		# optional: "select distinct memname"   #
+		fd.write('\tfrom dictionary.tables\n')
+		fd.write('\twhere libname = "' + dataset_name.upper() +'";\n')
+		fd.write('\tquit;\n')
+
 	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 	for fname in ['wrds_dicts.sas', 'wrds_dicts.lst', 'wrds_dicts.log']:
 		try:
 			sftp.remove(fname)
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt
-		except:
+		except: # @TODO: Handle case when file doesn't exist explicitly.
 			pass
 
 	(put_success, ssh, sftp) = _try_put(local_sas_file, 'wrds_dicts.sas', ssh, sftp, _domain, _username)
@@ -845,7 +849,8 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 												)
 	else:
 		logger.warning('find_wrds did not generate a wrds_dicts.lst '
-			+'file for input: '+str(dataset_name))
+			+'file for input: '+str(dataset_name)
+			)
 	try:
 		sftp.remove('wrds_dicts.sas')
 	except (IOError,EOFError,paramiko.SSHException):
@@ -854,9 +859,9 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 
 	flist = []
 	if os.path.exists(local_path):
-		fd = open(local_path, 'rb')
-		flist = fd.read().splitlines()
-		fd.close()
+		with open(local_path, 'rb') as fd:
+			flist = fd.read().splitlines()
+
 		flist = [x.strip() for x in flist]
 		flist = [x for x in flist if x != '']
 		dash_line = [x for x in range(len(flist)) if flist[x].strip('- ') == '']
@@ -919,7 +924,7 @@ def _recombine_ready(fname, dname=None, suppress=0):
 		isready = 0
 		if suppress == 0:
 			logger.warning('recombine_ready: '+fname
-				+' missing_nums '+repr(missing_nums+numlist))
+				+' missing_nums '+str(missing_nums+numlist))
 
 	end_nums = [re.sub('\.tsv$','',x[1]) for x in flist]
 	end_nums = [re.split('to',x)[-1] for x in end_nums]
@@ -927,7 +932,7 @@ def _recombine_ready(fname, dname=None, suppress=0):
 
 	if isready and end_nums != [] and max(end_nums)%rows_per_file == 0:
 		max_num = int(max(end_nums))
-		flist2 = [x[1] for x in flist if x[1].endswith(repr(max_num)+'.tsv')]
+		flist2 = [x[1] for x in flist if x[1].endswith(str(max_num)+'.tsv')]
 		if len(flist2) == 1:
 			outfile = flist2[0]
 			numlines = get_numlines(os.path.join(dname,outfile))
@@ -936,12 +941,13 @@ def _recombine_ready(fname, dname=None, suppress=0):
 				isready = 0
 				logger.warning('recombine_ready: '+outfile
 					+' numlines!=log_numlines: '
-					+repr([numlines,log_numlines]))
+					+str([numlines,log_numlines]))
 		else:
 			isready = 0
 			if suppress == 0:
 				logger.warning('recombine_ready: '+fname
-					+' appears incomplete: '+repr(max(end_nums)))
+					+' appears incomplete: '+str(max(end_nums))
+					)
 	return isready
 
 
@@ -952,8 +958,8 @@ def _recombine_ready(fname, dname=None, suppress=0):
 def recombine_files(fname, dname=None, suppress=0):
 	"""recombine_files(fname, dname=None, suppress=0)
 
-	Reads the files downloaded by get_wrds and combines them
-	back into the single file of interest.
+	Reads the files downloaded by get_wrds and combines them back into the
+	single file of interest.
 
 	If dname==None, the directory defaults to os.getcwd().
 
@@ -985,11 +991,12 @@ def recombine_files(fname, dname=None, suppress=0):
 	fd.close()
 	if nlines >= rows_per_file:
 		logger.error(fname+'; '+flist[-1]+'; '
-		+'len(flines)='+str(nlines)+', '
-		+'should_be='+str(rows_per_file))
+			+ 'len(flines)='+str(nlines)+', '
+			+ 'should_be='+str(rows_per_file)
+		)
 		return combined_files
 
-	fd = open(os.path.join(dname,fname0+'.tsv'),'wb')
+	fd = open(os.path.join(dname,fname0+'.tsv'), 'wb')
 	headers = []
 	found_problem = 0
 	for fname1 in flist:
@@ -1041,18 +1048,16 @@ def get_numlines(path2file):
 
 ################################################################################
 has_modules = {}
-for module_name in ['paramiko']:
-	try:
-		exec('import '+module_name) ## dont use exec!
-		has_modules[module_name] = 1
-	except ImportError:
-		logger.warning('Some '+sys._getframe().f_code.co_filename
-			+ ' functionality requires the package "'+module_name
-			+ '".  Please "pip install '+module_name+'".  Otherwise some '
-			+ sys._getframe().f_code.co_filename
-			+ ' functionality will be limited.'
+try:
+	import paramiko
+	has_modules['paramiko'] = 1
+except ImportError:
+	logger.warning('Some ectools.py functionality requires the package '
+		+ '"paramiko".  Please run "pip install paramiko".  Otherwise '
+		+ 'some ectools.py functionality will be limited.'
 		)
-		has_modules[module_name] = 0
+	has_modukes['paramiko'] = 0
+
 
 
 ################################################################################
