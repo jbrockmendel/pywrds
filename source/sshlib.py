@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 pywrds.sshlib is essentially a wrapper around paramiko for interacting with
-remote servers via SSH and SFTP.  Nothingvin sshlib is specific to WRDS.
+remote servers via SSH and SFTP.  Nothing in sshlib is specific to WRDS.
 
 last edit: 2014-08-21
 """
@@ -33,7 +33,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	"""
 	if not has_modules['paramiko']:
 		logger.error('sshlib.getSSH is unavailable without dependency "paramiko"'
-			+'  Returning [None, None].')
+			+'  Returning (None, None).')
 		return (None, None)
 	if sftp:
 		try:
@@ -623,23 +623,6 @@ def print_func(level=1):
 
 
 ################################################################################
-default_logger = logging.getLogger('log')
-default_logger.setLevel(logging.INFO)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-default_formatter = logging.Formatter(log_format)
-default_handler = logging.StreamHandler()
-default_handler.setLevel(logging.INFO)
-default_handler.setFormatter(default_formatter)
-default_logger.addHandler(default_handler)
-
-
-
-
-
-
-
-
-################################################################################
 def timeout_decorator(timeout_time, default):
 	"""timeout_decorator(timeout_time, default)
 
@@ -675,7 +658,9 @@ class TimeoutException(Exception):
 
 @timeout_decorator(10, '')
 def quick_password(prompt="Please enter your password: "):
-	"""Prompt the user for a password.  The decorated function
+	"""quick_password(prompt="Please enter your password: ")
+
+	Prompt the user for a password.  The decorated function
 	gives an upper bound of 10 seconds on how long it will wait
 	for input before assuming an empty string.
 
@@ -683,12 +668,18 @@ def quick_password(prompt="Please enter your password: "):
 	"""
 	password = getpass.getpass(prompt)
 	return password
+
+
+
 ################################################################################
-
-
-
-
-
+default_logger = logging.getLogger('log')
+default_logger.setLevel(logging.INFO)
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+default_formatter = logging.Formatter(log_format)
+default_handler = logging.StreamHandler()
+default_handler.setLevel(logging.INFO)
+default_handler.setFormatter(default_formatter)
+default_logger.addHandler(default_handler)
 
 
 
@@ -700,9 +691,9 @@ try:
 	has_modules['paramiko'] = 1
 except:
 	logger.warning('Some pywrds.sshlib'
-		+' functionality requires the package "paramiko".'
-		+'  Please "pip install paramiko".  Otherwise some '
-		+' functionality will be limited.'
+		+ ' functionality requires the package "paramiko".'
+		+ '  Please "pip install paramiko".  Otherwise some '
+		+ ' functionality will be limited.'
 	)
 	has_modules['paramiko'] = 0
 
@@ -711,18 +702,18 @@ try:
 	has_modules['Crypto.PublicKey.RSA'] = 1
 except:
 	logger.warning('Some pywrds.sshlib'
-		+' functionality requires the package "Crypto.PublicKey.RSA".'
-		+'  Please "pip install pycrypto".  Otherwise some '
-		+' functionality will be limited.\n'
-		#
-		+"If this erorr occurs again after installing pycrypto, "
-		+", there may be an issue with "
-		+'Python recognizing "crypto" instead of "Crypto".  This '
-		+'can be duct-taped by changing the directory name where '
-		+' "crypto" is installed to "Crypto".'
-		+"  This is purely based on the author's experience.  "
-		+"Your mileage may vary"
-		)
+		+ ' functionality requires the package "Crypto.PublicKey.RSA".'
+		+ '  Please "pip install pycrypto".  Otherwise some '
+		+ ' functionality will be limited.\n'
+
+		+ "If this erorr occurs again after installing pycrypto, "
+		+ ", there may be an issue with "
+		+ 'Python recognizing "crypto" instead of "Crypto".  This '
+		+ 'can be duct-taped by changing the directory name where '
+		+ ' "crypto" is installed to "Crypto".'
+		+ "  This is purely based on the author's experience.  "
+		+ "Your mileage may vary"
+	)
 	has_modules['Crypto.PublicKey.RSA'] = 0
 
 
