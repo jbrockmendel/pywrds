@@ -5,10 +5,12 @@ pywrds.wrdslib is a collection of functions used by ectools
 which use or provide information specific to the WRDS SAS
 system.
 
-last edit: 2014-08-13
+last edit: 2015-05-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, os, re, stat, sys, time
+import logging
+logger = logging.getLogger(__name__)
 
 try: import simplejson as json
 except ImportError: import json
@@ -16,22 +18,21 @@ except ImportError: import json
 ################################################################################
 from . import sshlib
 
-wrds_domain = 'wrds.wharton.upenn.edu'
+from .wrds_parameters import wrds_domain, _get_all, first_dates, first_date_guesses
+from .wrds_parameters import date_vars, date_var_guesses, autoexec_text
+
+now = time.localtime()
+(this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
 
 ################################################################################
-
-import logging
-logger = logging.getLogger(__name__)
-
-
-
 user_info = {}
 this_file = os.path.abspath(__file__)
 user_path = this_file.split('source')[0]
 user_info_filename = os.path.join(user_path,'user_info.txt')
 if os.path.exists(user_info_filename):
-	fd = open(user_info_filename,'r') # r instead of rb for Python3 compatibility #
+	fd = open(user_info_filename,'r') # r instead of rb for Python3 compatibility
 	content = fd.read()
+	fd.close()
 	content = content.replace(u'\xe2\x80\x9c', u'"')
 	content = content.replace(u'\xe2\x80\x9d', u'"')
 	# Fix "smart" quotes sometimes inserted by text editors.
@@ -41,17 +42,13 @@ if os.path.exists(user_info_filename):
 	except ValueError:
 		logger.warning('pywrds.wrdslib warning: user_info.txt file does not '
 			+ 'conform to json format.  Please address this '
-			+ 'and reload ectools.')
-	fd.close()
+			+ 'and reload ectools.'
+		)
 else:
 	logger.warning('pywrds.wrdslib warning: Please create a user_info.txt '
 		+ 'file conforming to the format given in the '
-		+ 'user_info_example.txt file.')
-
-
-
-
-
+		+ 'user_info_example.txt file.'
+	)
 
 
 ################################################################################
@@ -72,116 +69,10 @@ if 'last_wrds_download' not in user_info.keys():
 last_wrds_download = user_info['last_wrds_download']
 
 ################################################################################
-# first_dates is an estimate of the first date YYYYMMDD on        #
-# which data is available for a given WRDS dataset.               #
-first_dates = {
-	"taq.div": 19930000,
-	"taq.mast": 19930000,
-	"taq.RGSH": 20050100,
-	"taq.cq": 19930104,
-	"taq.ct": 19930104,
-	"ff.liq_ps": 19620000,
-	"ff.factors_daily": 19620000,
-	"ff.factors_monthly": 19620000,
-	"ff.liq_sadka": 19830000,
-	"crsp.msf": 19250000,
-	"crsp.dsf": 19250000,
-	"crspa.sp500": 19250000,
-	"crsp.sp500": 19250000,
-	"crspq.portnomap": 20000000,
-	"crsp.portnomap": 20000000,
-	"crspq.holdings": 20010000,
-	"crsp.holdings": 20010000,
-	"crspq.front_load": 19610000,
-	"crspq.rear_load": 19610000,
-	"crsp1.daily_nav_ret": 19980000,
-	"crsp.fund_summary2": 19610000,
-	"crspa.sp500": 19250000,
-	"crspa.cti": 19250000,
-	"crspa.bxcalind": 19610000,
-	"crspa.tfz_ft": 19610000,
-	"crspa.tfz_dly": 19610000,
-	"crspa.dreit": 19800000,
-	"crspq.dividends": 19600000,
-	"crspa.tfz_mth_rf": 19250000,
-	"crsp.tfz_mth_rf": 19250000,
-	"crspa.mbmdat": 19250000,
-	"crsp.cti": 19250000,
-	"ibes.det_xepsus": 19890000,
-	"ibes.det_xepsint": 19930000,
-	"ibes.recddet": 19920000,
-	"ibes.det_epsus": 19800000,
-	"ibes.det_epsint": 19800000,
-	"optionm.opprcd": 19960000,
-	"tfn.s12": 19800000,
-	"tfn.s34": 19800000,
-	"comp.fundq": 19610000,
-	"comp.g_fundq": 19870000,
-	"comp.secd": 19830000,
-	"comp.g_secd": 19850000,
-	"comp.idx_daily": 19000000,
-	"comp.g_idx_daily": 19700000,
-	"comp.inxcst_hist": 19000000,
-	"compm.fundq": 19610101
-}
 
-# first_guesses is a courser estimate for the dataset provider       #
-# crowdsourced improvements to these estimates are welcome.          #
-first_date_guesses = {
-	"tfn": 19790000,
-	"ibes": 19750000,
-	"optionm": 19960000,
-	"comp": 19600000,
-	"comp.exrt_dly": -1,
-	"comp.execcomp": -2,
-	"compm": 19610000
-}
 
-# date_vars gives the label that each dataset uses for its date variables   #
-date_vars = {
-	"optionm.opprcd": "date"
-}
-date_var_guesses = {
-	"ibes": "anndats",
-	"crsp": "date",
-	"tfn": "fdate",
-	"comp": "DATADATE",
-	"optionm": "effect_date"
-}
 
-# dataset_list is a partial list of dataset            #
-# labels that can be fetched with get_wrds             #
-dataset_list = [
-	"bank.all",
-	"bvd.ama",
-	"bvd.bankscope",
-	"risk.directors",
-	"risk.governance",
-	"sprat.all",
-	"doe.all",
-	"cboe.all",
-	"comp.execucomp",
-	"crsp.indices",
-	"djones.all",
-	"frb.all",
-	"fisd.fisd",
-	"fisd.naic",
-	"phlx.all",
-	"trace.all",
-	"tfn.insiderdata",
-	"taq.div",
-	"comp.g_idx_daily",
-	"crsp.cti",
-	"crspa.cti",
-	"crspa.dreit",
-	"crspa.tfz_dly",
-	"crsp.fund_summary2",
-	"comp.inxcst_hist",
-	"crsp.sp500",
-	"crspa.sp500",
-	"comp.secd",
-	"comp.g_secd"
-]
+
 
 
 
@@ -249,10 +140,9 @@ def check_quota(ssh):
 def rows_per_file_adjusted(dataset):
 	"""rows_per_file_adjusted(dataset)
 
-	_rows_per_file chooses a number of rows to query in each
-	_get_wrds_chunk request to ensure that the files produced
-	do not approach the 1 GB server limit.  For most datasets,
-	10^7 rows in a file is not a problem.  For optionm.opprcd,
+	Choose a number of rows to query in each _get_wrds_chunk request to ensure
+	that the files produced do not approach the 1 GB server limit.  For most
+	datasets, 10^7 rows in a file is not a problem.  For optionm.opprcd,
 	this number is dropped to 10^6.
 
 	To date optionm.opprcd is the only dataset for which this has
@@ -261,22 +151,23 @@ def rows_per_file_adjusted(dataset):
 
 	return rows_per_file
 	"""
+	# @TODO: query the server for file sizes and number of lines, use
+	# this to determine the rows_per_file
 	rows_per_file = 10**7
-	if dataset.replace('.','_') == 'optionm_opprcd':
+	if dataset.replace('.', '_') == 'optionm_opprcd':
 		rows_per_file = 10**6
-	elif dataset.replace('.','_') == 'optionm_optionmnames':
+	elif dataset.replace('.', '_') == 'optionm_optionmnames':
 		rows_per_file = 10**6
 	return rows_per_file
 
 
 
 ################################################################################
-now = time.localtime()
-[this_year, this_month, today] = [now.tm_year, now.tm_mon, now.tm_mday]
 def get_ymd_range(min_date, dataset, weekdays=1):
-	"""get_ymd_range(min_date, dataset, weekdays=1) gets a list of
-	tuples [year, month, date] over which to iterate in wrds_loop.  Some
-	datasets include very large files and need to be queried
+	"""get_ymd_range(min_date, dataset, weekdays=1)
+
+	Get a list of tuples (year, month, date) over which to iterate in wrds_loop.
+	Some datasets include very large files and need to be queried
 	at a monthly or daily frequency to prevent giant files from
 	causing problems on the server.
 
@@ -306,40 +197,45 @@ def get_ymd_range(min_date, dataset, weekdays=1):
 
 ################################################################################
 def get_loop_frequency(dataset, year):
-	"""get_loop_frequency(dataset, year) finds the best frequency at which
-	to query the server for the given dataset so as to avoid producing
-	problematically large files.
+	"""get_loop_frequency(dataset, year)
+
+	Find the best frequency at which to query the server for the given dataset
+	so as to avoid producing problematically large files.
 
 	return frequency
 	"""
+	# @TODO: Check the file size on the server and use a set rule instead
+	# of making case-by-case decisions.
 	frequency = 'Y'
 	if dataset.startswith('optionm'):
 		if year < 2008:
 			frequency = 'M'
 		else:
 			frequency = 'D'
-	elif re.search('det_xepsus',dataset,flags=re.I):
+	elif re.search('det_xepsus', dataset, flags=re.I):
 		if year > 2005:
 			frequency = 'M'
-	elif re.search('det_xepsint',dataset,flags=re.I):
+	elif re.search('det_xepsint', dataset, flags=re.I):
 		if year > 2003:
 			frequency = 'M'
-	elif re.search('taq',dataset,flags=re.I):
+	elif re.search('taq', dataset, flags=re.I):
 		frequency = 'D'
 	return frequency
 
 
 ################################################################################
 def fix_weekdays(ymds, weekdays=1):
-	"""fix_weekdays(ymds, weekdays=1) takes a set of [year,month,date]
-	tuples "ymds" and removes those which are not valid days,
-	e.g. June 31, February 30.
+	"""fix_weekdays(ymds, weekdays=1)
 
-	If weekdays is set to its default value of 1, it also removes
+	Take a set of (year, month, date) tuples "ymds" and removes those which
+	are not valid days, e.g. June 31, February 30.
+
+	If weekdays is set to its default value of 1, also remove
 	Saturday and Sundays.
 
 	return ymds
 	"""
+	# @TODO: holidays
 	ymds2 = []
 	for [y, m, d] in ymds:
 		try:
@@ -367,27 +263,28 @@ def fix_weekdays(ymds, weekdays=1):
 ################################################################################
 def fix_input_name(dataset, year, month, day, rows=[]):
 	"""fix_input_name(dataset, year, month, day, rows=[])
-	adjusts the user-supplied dataset name to use the same
-	upper/lower case conventions as WRDS does.
 
-	return [dataset, output_file]
+	Adjust the user-supplied dataset name to use the same upper/lower case
+	conventions used on the WRDS server.
+
+	return (dataset, output_file)
 	"""
-	[Y, M, D, R] = [year, month, day, rows]
+	(Y, M, D, R) = (year, month, day, rows)
 	if year != 'all':
 		ystr = '_'*(dataset[-1].isdigit())+str(Y)
 		mstr = '' + (M != 0)*('0'*(month<10)+str(M))
 		dstr = (D != 0)*('0'*(D<10)+str(D))
 		ymdstr = ystr + mstr + dstr +'.tsv'
-		output_file = re.sub('\.','_',dataset) + ymdstr
+		output_file = re.sub('\.', '_', dataset) + ymdstr
 	else:
-		output_file = re.sub('\.','_',dataset)+'.tsv'
+		output_file = re.sub('\.', '_', dataset)+'.tsv'
 
 	if dataset.lower() == 'optionm.opprcd':
 		dataset = dataset+str(year)
 
 	elif dataset.lower() in ['taq.cq', 'taq.ct']:
-		dataset = re.sub('cq','CQ',dataset)
-		dataset = re.sub('ct','CT',dataset)
+		dataset = re.sub('cq', 'CQ', dataset)
+		dataset = re.sub('ct', 'CT', dataset)
 		ystr = '_' + str(Y)
 		mstr = ''+(M != 0)*('0'*(M<10)+str(M))
 		dstr = ''+(D != 0)*('0'*(D<10)+str(D))
@@ -404,7 +301,7 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 
 	if R != []:
 		rowstr = 'rows'+str(R[0])+'to'+str(R[1])+'.tsv'
-		output_file = re.sub('.tsv$','',output_file) + rowstr
+		output_file = re.sub('.tsv$', '', output_file) + rowstr
 
 	return (dataset, output_file)
 
@@ -413,13 +310,13 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 ################################################################################
 def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	"""wrds_sas_script(dataset, year, month=0, day=0, rows=[])
-	generates a .sas file which is executed on the WRDS server
-	to produce the desired dataset.
+
+	Generate a .sas file which is executed on the WRDS server to produce the
+	desired dataset.
 
 	return (sas_file, output_file, dataset)
 	"""
-	tic = time.time()
-	[Y, M, D, R] = [year, month, day, rows]
+	(Y, M, D, R) = (year, month, day, rows)
 	ystr = '' + ('_' + str(Y))*(Y != 'all')
 	mstr = '' + (M != 0)*('0'*(M<10)+str(M))
 	dstr = '' + (D != 0)*('0'*(D<10)+str(D))
@@ -488,7 +385,8 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 ################################################################################
 def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 	"""update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0)
-	amends the user_info file to reflect the most recent download dates
+
+	Amend the user_info file to reflect the most recent download dates
 	for wrds files.
 
 	return
@@ -498,7 +396,7 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 		if 'last_wrds_download' not in user_info.keys():
 			user_info['last_wrds_download'] = {}
 		user_info['last_wrds_download'][dataset] = year*10000 + month*100 + day
-		fd = open(user_info_filename,'wb')
+		fd = open(user_info_filename, 'wb')
 		fd.write(json.dumps(user_info, indent=4))
 		fd.close()
 	else:
@@ -510,20 +408,18 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 
 
 ################################################################################
-_get_all = ['crsp.stocknames', 'comp.company', 'comp.g_company']
-# datasets for which the default is to download the entire   #
-# dataset at once                                            #
 
 def min_YMD(min_date, dataset):
-	"""min_YMD(min_date, dataset) finds (year,month,day) at which
-	to start wrds_loop when downloading the entirety of a
-	dataset.  It checks user_info to find what files have
+	"""min_YMD(min_date, dataset)
+
+	Find (year, month, day) at which to start wrds_loop when downloading the
+	entirety of a dataset.  Check user_info to find what files have
 	already been downloaded.
 
-	return [min_year, min_month, min_day]
+	return (min_year, min_month, min_day)
 	"""
 	if dataset in _get_all:
-		return [-1, -1, -1]
+		return (-1, -1, -1)
 
 	if 'last_wrds_download' not in user_info:
 		user_info['last_wrds_download'] = {}
@@ -542,10 +438,11 @@ def min_YMD(min_date, dataset):
 		if not min_date.isdigit() or len(min_date) != 8:
 			min_date = 0
 			logger.warning('user_info["last_wrds_download"]["'+dataset+'"]='
-				+min_date+' error, should be an eight digit integer.')
-		min_year = int(float(min_date[:4]))
-		min_month = int(float(min_date[4:6]))
-		min_day = int(float(min_date[6:]))
+				+min_date+' error, should be an eight digit integer.'
+			)
+		min_year = int(min_date[:4])
+		min_month = int(min_date[4:6])
+		min_day = int(min_date[6:])
 		if min_month == min_day == 0:
 			min_year += 1
 		elif min_day == 0:
@@ -556,7 +453,7 @@ def min_YMD(min_date, dataset):
 		else:
 			min_day += 1
 			try:
-				wday = datetime.date(min_month,min_month,min_day).weekday()
+				wday = datetime.date(min_month, min_month, min_day).weekday()
 			except ValueError:
 				min_day = 1
 				min_month += 1
@@ -570,11 +467,12 @@ def min_YMD(min_date, dataset):
 			min_month = 0
 			min_year = 1880
 			logger.warning('Setting min_year = 1880.  This will result in '
-				+'many empty data files and unnecessary looping.  '
-				+'This can be prevented by a) inputting a higher '
-				+'min_date or b) finding the first date at which '
-				+'this dataset is available on WRDS and letting '
-				+'Brock know so he can update the code appropriately.')
+				+ 'many empty data files and unnecessary looping.  '
+				+ 'This can be prevented by a) inputting a higher '
+				+ 'min_date or b) finding the first date at which '
+				+ 'this dataset is available on WRDS and letting '
+				+ 'Brock know so he can update the code appropriately.'
+			)
 		elif min_date < 2050:
 			min_day = 0
 			min_month = 0
@@ -608,7 +506,7 @@ def min_YMD(min_date, dataset):
 			min_year = 1880
 
 	return (min_year, min_month, min_day)
-################################################################################
+
 
 
 ################################################################################
@@ -635,23 +533,21 @@ def wrds_datevar(filename):
 	if re.search('^ibes',filename):
 		return 'anndats'
 	return 'date'
-################################################################################
-
-
-
 
 
 ################################################################################
 def setup_wrds_key():
-	"""setup_wrds_key() sets up a key-based authentication on
-	the wrds server, so that the user can log in without a
-	password going forward.
+	"""setup_wrds_key()
+
+	Set up a key-based authentication on the wrds server, so that the user can
+	log in without a password going forward.
 
 	return (ssh, sftp)
 	"""
 	if not wrds_username:
 		logger.warning('setup_wrds_key() cannot run until wrds_username is '
-			+'specified in the user_info.txt file.')
+			+'specified in the user_info.txt file.'
+		)
 		return (None, None)
 	(ssh, sftp) = sshlib.put_ssh_key(domain=wrds_domain, username=wrds_username)
 	institution = get_wrds_institution(ssh, sftp)
@@ -661,8 +557,9 @@ def setup_wrds_key():
 
 ################################################################################
 def get_wrds_institution(ssh, sftp):
-	"""get_wrds_institution(ssh, sftp) gets the institution associated
-	with the user's account on the wrds server.
+	"""get_wrds_institution(ssh, sftp)
+
+	Get the institution associated with the user's account on the wrds server.
 
 	return institution_path
 	"""
@@ -695,9 +592,4 @@ def get_wrds_institution(ssh, sftp):
 
 
 ################################################################################
-autoexec_text = ("*  The library name definitions below are used by SAS;\n"
-	+"*  Assign default libref for WRDS (Wharton Research Data Services);"
-	+"\n\n   %include '!SASROOT/wrdslib.sas' ;\n\n\n"
-	)
-
 
