@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-pywrds.wrdslib is a collection of functions used by ectools
-which use or provide information specific to the WRDS SAS
-system.
+pywrds.wrdslib is a collection of functions used by ectools which use or
+provide information specific to the WRDS SAS system.
 
 last edit: 2015-05-17
 """

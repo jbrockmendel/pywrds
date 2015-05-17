@@ -214,13 +214,11 @@ def _rename_after_download():
 def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	"""_get_wrds_chunk(dataset, Y, M=0, D=0, rows=[], ssh=[], sftp=[])
 
-	Some files requested by get_wrds are too large to fit
-	in a user's allotted space on the wrds server.  For these
-	files, get_wrds will split the request into multiple
-	smaller requests to retrieve multiple files and run each
-	of them through _get_wrds_chunk.  If the argument
-	"recombine" is set to its default value of 1, these files
-	will be recombined once the loop completes.
+	Some files requested by get_wrds are too large to fit in a user's allotted
+	space on the wrds server.  For these files, get_wrds will split the request
+	into multiple smaller requests to retrieve multiple files and run each of
+	them through _get_wrds_chunk.  If the argument "recombine" is set to its
+	default value of 1, these files will be recombined once the loop completes.
 
 	return (success, ssh, sftp, time_elapsed)
 	"""
@@ -230,7 +228,7 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 		return (0, ssh, sftp, time.time()-tic)
 
 	(sas_file, outfile, dataset) = wrdslib.wrds_sas_script(dataset, Y, M, D, R)
-	log_file = re.sub('\.sas$','.log',sas_file)
+	log_file = re.sub('\.sas$', '.log', sas_file)
 
 	put_success = _put_sas_file(ssh, sftp, outfile, sas_file)
 	# @TODO: if not put_success: ...
@@ -240,7 +238,6 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 	if exit_status in [0, 1]:
 		(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
 		file_list = fdict.keys()
-		#file_list = sftp.listdir()
 		if outfile not in file_list:
 			logger.error('exit_status in [0, 1] suggests SAS succeeded, '
 				+ 'but the desired output_file "'

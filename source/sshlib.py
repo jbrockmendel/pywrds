@@ -4,7 +4,7 @@
 pywrds.sshlib is essentially a wrapper around paramiko for interacting with
 remote servers via SSH and SFTP.  Nothing in sshlib is specific to WRDS.
 
-last edit: 2014-08-21
+last edit: 2015-05-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
@@ -19,21 +19,21 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	"""
 	getSSH(ssh, sftp, domain, username, ports=[22])
 
-	Checks to see if the ssh and sftp objects are active paramiko
-	connections to the server at "domain".  If not, the function
-	attempts to initiate a new connection.
+	Checks to see if the ssh and sftp objects are active paramiko connections
+	to the server at "domain".  If not, the function attempts to initiate a new
+	connection.
 
-	The function first trys key-based
-	authentication and then falls back to password authentication.
-	If no password is entered within 10 seconds, the function
-	assumes it is being run as part of a script and skips
-	the password step.
+	The function first trys key-based authentication and then falls back to
+	password authentication.  If no password is entered within 10 seconds, the
+	function assumes it is being run as part of a script and skips the password
+	step.
 
 	return (ssh, sftp)
 	"""
 	if not has_modules['paramiko']:
-		logger.error('sshlib.getSSH is unavailable without dependency "paramiko"'
-			+'  Returning (None, None).')
+		logger.error('sshlib.getSSH is unavailable without dependency '
+			+ '"paramiko".  Returning (None, None).'
+			)
 		return (None, None)
 	if sftp:
 		try:
@@ -70,6 +70,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 				sftp = ssh.open_sftp()
 				break
 			except paramiko.AuthenticationException:
+				# @TODO: Why is there both default_logger and logger?
 				default_logger.info('key-based authentication to '
 					+'server '+str(domain) + ' failed, attempting '
 					+'password-based authentication')
@@ -85,7 +86,8 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 					default_logger.warning(print_func()
 						+' could not connect to the server '
 						+str(domain)+' with username '
-						+str(username))
+						+str(username)
+						)
 					break
 			except (paramiko.SSHException,socket.error):
 				(error_type, error_value, error_traceback) = sys.exc_info()
@@ -155,7 +157,8 @@ def ssh_keygen():
 	## on Windows systems.
 	if not has_modules['Crypto.PublicKey.RSA']:
 		logger.warning('sshlib.ssh_keygen is unavailable without '
-			+'dependency "Crypto.PublicKey.RSA".  Returning None.')
+			+'dependency "Crypto.PublicKey.RSA".  Returning None.'
+			)
 		return None
 
 	key_path = find_ssh_key(make=1)
@@ -170,6 +173,7 @@ def ssh_keygen():
 	priv_read = os.path.exists(priv_path) and os.access(priv_path, os.R_OK)
 	priv_write = pub_read and os.access(priv_path, os.W_OK)
 
+	# @TODO: warn and return in cases of permission problems.
 	pub_ROK = 'id_rsa.pub' in ssh_dirlist and os.access()
 	if 'id_rsa' not in ssh_dirlist and 'id_rsa.pub' not in ssh_dirlist:
 		key = Crypto.PublicKey.RSA.generate(2048)
@@ -185,7 +189,7 @@ def ssh_keygen():
 		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir,700)
 	elif 'id_rsa' in ssh_dirlist:
-        with open(os.path.join(ssh_dir,'id_rsa'),'rb') as fd:
+        with open(priv_path, 'rb') as fd:
             private_key = fd.read()
 		# begin unmerged lines from cpt branch
         ## BUG: PyCrypto not working with password encrypted keys, see
@@ -194,25 +198,23 @@ def ssh_keygen():
         ## key_path.
         # end unmgerged lines from cpt branch, everything below
         # here in this "elif" block is commented out in that branch.
-		#fd = open(os.path.join(ssh_dir,'id_rsa'),'rb')
-		#private_key = fd.read()
-		#fd.close()
 		pk = Crypto.PublicKey.RSA.importKey(private_key)
 		public_key = pk.publickey().exportKey('OpenSSH')
-		fd = open(os.path.join(ssh_dir,'id_rsa.pub'),'wb')
+		fd = open(pub_path, 'wb')
 		fd.write(public_key)
 		fd.close()
-		os.chmod(os.path.join(ssh_dir, 'id_rsa'), 600)
-		os.chmod(os.path.join(ssh_dir, 'id_rsa.pub'), 600)
+		os.chmod(priv_path, 600)
+		os.chmod(pub_path, 600)
 		os.chmod(ssh_dir, 600)
 		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir, 700)
 	elif 'id_rsa.pub' in ssh_dirlist:
 		logger.warning('ssh_keygen() expected the directory '+ssh_dir
-			+' to contain either zero or both of "id_rsa", "id_rsa.pub",'
-			+' but only "id_rsa.pub" was found.  Aborting ssh_keygen on '
-			+'the assumption that this situation is intentional on the '
-			+'part of the user.')
+			+ ' to contain either zero or both of "id_rsa", "id_rsa.pub",'
+			+ ' but only "id_rsa.pub" was found.  Aborting ssh_keygen on '
+			+ 'the assumption that this situation is intentional on the '
+			+ 'part of the user.'
+			)
 		key_path = None
 	return key_path
 
@@ -414,36 +416,29 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag):
 	"""_check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
 
-	Checks whether the file exists at local_path and has
-	remained unchanged for at least lag seconds.  If not,
-	it returns a code go_on=0 indicating that this file
-	should be skipped by any downloading script.
+	Checks whether the file exists at local_path and has remained unchanged
+	for at least "lag" seconds.  If not,it returns a code go_on=0 indicating that
+	this file should be skipped by any downloading script.
 
-	Otherwise the function checks for the existence of the
-	file at remote_path.  If the file does not exist, it
-	returns go_on=1.
+	Otherwise the function checks for the existence of the file at remote_path.
+	If the file does not exist, it returns go_on=1.
 
-	If the remote file exists, the function checks whether
-	that file has been modified in the last lag seconds,
-	and if so returns go_on=0.
+	If the remote file exists, the function checks whether that file has been
+	modified in the last lag seconds, and if so returns go_on=0.
 
-	In each of these last three cases, along with go_on
-	the function returns success=0 indicating that the
-	transfer has not yet been accomplished.
+	In each of these last three cases, along with go_on the function returns
+	success=0 indicating that the transfer has not yet been accomplished.
 
-	If both files exist and neither file has been modified
-	in the last lag seconds, the function checks if the two
-	files are the same size.  If so, it returns go_on=0
-	and success=1 indicating that the file can be skipped
+	If both files exist and neither file has been modified in the last lag
+	seconds, the function checks if the two files are the same size.  If so,
+	it returns go_on=0 and success=1 indicating that the file can be skipped
 	because the transfer has already occurred successfully.
 
-	If the remote file is both bigger and more recently
-	modified than the local file, the function returns
-	go_on=0, success=1, assuming that the newer bigger
-	file is the correct version.
+	If the remote file is both bigger and more recently modified than the local
+	file, the function returns go_on=0, success=1, assuming that the newer
+	bigger file is the correct version.
 
-	In all other cases, the function returns go_on=1,
-	success=0.
+	In all other cases, the function returns go_on=1, success=0.
 
 	return (ssh, sftp, go_on, success)
 	"""
@@ -539,9 +534,9 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
 def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
 	"""_try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22])
 
-	Trys three times to get a a list of files and their attributes
-	from the directory remote_dir on the remote server,
-	reinitiating the ssh connection if needbe.
+	Trys three times to get a a list of files and their attributes from the
+	directory remote_dir on the remote server, reinitiating the ssh connection
+	if necessary.
 
 	Creates a dictionary fdict = {filename: [attributes]} across
 	the files in the remote directory.
@@ -599,6 +594,7 @@ def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
 
 ################################################################################
 def _try_exec(command, ssh, sftp, domain, username, ports=[22]):
+	# @ TODO: wait for success, capture stdout, stderr messages
 	[success, numtrys, maxtrys] = [0, 0 ,3]
 	[stdin, stdout, stderr] = [None, None, None]
 	while not success and numtrys < maxtrys:
@@ -710,7 +706,7 @@ except:
 		+ ' functionality requires the package "paramiko".'
 		+ '  Please "pip install paramiko".  Otherwise some '
 		+ ' functionality will be limited.'
-	)
+		)
 	has_modules['paramiko'] = 0
 
 try:
