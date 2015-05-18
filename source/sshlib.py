@@ -63,10 +63,9 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 					key_filename=key_filename
 					)
 
-				handler = logging.StreamHandler()
 				transport = ssh.get_transport()
 				tlogger = transport.logger
-				tlogger.addHandler(handler)
+				tlogger.addHandler(default_handler)
 
 				sftp = ssh.open_sftp()
 				break
@@ -82,10 +81,9 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 						password=quick_password(prompt=prompt)
 						)
 
-					handler = logging.StreamHandler()
 					transport = ssh.get_transport()
 					tlogger = transport.logger
-					tlogger.addHandler(handler)
+					tlogger.addHandler(default_handler)
 
 					sftp = ssh.open_sftp()
 					break

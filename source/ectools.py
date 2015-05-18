@@ -16,11 +16,6 @@ import datetime, math, os, re, shutil, sys, time
 
 import logging
 logger = logging.getLogger(__name__)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = logging.Formatter(log_format)
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 ################################################################################
 from . import sshlib, wrdslib
@@ -87,9 +82,9 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 			(keep_going, ssh, sftp, dt) = _get_wrds_chunk(dataset, Y, M, D, R, ssh, sftp)
 		if keep_going > 0:
 			numfiles += 1
-			if os.path.exists(os.path.join(_dlpath,outfile)):
+			if os.path.exists(os.path.join(_dlpath, outfile)):
 				log_lines = get_numlines_from_log(outfile, dname=_dlpath)
-				numlines = get_numlines(os.path.join(_dlpath,outfile))
+				numlines = get_numlines(os.path.join(_dlpath, outfile))
 				if log_lines > numlines:
 					logger.error('get_wrds error: file '
 						+ outfile+' has '+ str(numlines)
@@ -499,7 +494,6 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 				return exit_status
 
 			(ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
-			#file_list = sftp.listdir()
 			if outfile in fdict.keys():
 				exit_status = 0
 				sas_completion = 1
@@ -528,8 +522,12 @@ def _run_sas_command(ssh, sftp, sas_file, outfile):
 		return -1
 
 	sas_command = 'sas -noterminal '+ sas_file
-
-	#(success, stdin, stdout, stderr, ssh, sftp) = _try_exec(sas_command, ssh, sftp, _domain, _username)
+	#(success, stdin, stdout, stderr, ssh, sftp) = _try_exec(sas_command,
+	#														ssh,
+	#														sftp,
+	#														_domain,
+	#														_username
+	#														)
 	(stdin, stdout, stderr) = ssh.exec_command(sas_command)
 	[exit_status, exit_status2, waited, maxwait] = [-1, -1, 0, 1200]
 	while exit_status == -1 and waited < maxwait:
@@ -589,20 +587,6 @@ def _handle_sas_failure(ssh, sftp, exit_status, outfile, log_file):
 													)
 			if get_success == 0:
 				logger.warning('File download failure.')
-			#try:
-			#	sftp.get(outfile, localpath=os.path.join(_dlpath,outfile))
-			#except KeyboardInterrupt:
-			#	raise KeyboardInterrupt
-			#except : ### hacked together ###
-			#	print('File download failure.')
-			#	pass
-			#try:
-			#	sftp.remove(outfile)
-			#except KeyboardInterrupt:
-			#	raise KeyboardInterrupt
-			#except :
-			#	print('File removal failure.')
-			#	pass
 
 		else:
 			logger.error('get_wrds failed on file "'+outfile+'"\n'
@@ -692,23 +676,10 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 											remote_path=remote_path,
 											local_path=local_path
 											)
-	#while get_success == 0 and numtrys < maxtrys:
-	#	try:
-	#		sftp.get(remotepath=remote_path, localpath=local_path)
-	#		get_success = 1
-	#	except (paramiko.SSHException,paramiko.SFTPError,IOError,EOFError):
-	#		if os.path.exists(local_path):
-	#			os.remove(local_path)
-	#		(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
-	#		numtrys += 1
-	#	except KeyboardInterrupt:
-	#		if os.path.exists(local_path):
-	#			os.remove(local_path)
-	#		raise KeyboardInterrupt
 
 	logger.info('retrieve_file: '+str(outfile)
 		+ ' ('+str(remote_size)+' bytes) '
-		+ ' time elapsed='+str(time.time()-tic)
+		+ ' time elapsed='+str(round(time.time()-tic,3))
 		)
 
 	return (get_success, time.time()-tic)
@@ -747,8 +718,9 @@ def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
 
 	if waited3 >= maxwait:
 		# @ TODO: "step 3" is not an informative statement.
-		logger.warning('get_wrds stopped waiting for SAS completion at step 3',
-			locmeasure1, locmeasure2, mtime2)
+		logger.warning('get_wrds stopped waiting for SAS completion at step 3: '
+			+ str((locmeasure1, locmeasure2, mtime2))
+			)
 		locmeasure1 = 0
 	local_size = locmeasure1
 	return local_size
@@ -780,7 +752,6 @@ def _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size):
 																	_domain,
 																	_username
 																	)
-		#[stdin, stdout, stderr] = ssh.exec_command('rm ' + outfile)
 		to_path = os.path.join(_dlpath, outfile)
 		shutil.move(local_path, to_path)
 		comare_success = 1
@@ -917,7 +888,6 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 										_domain,
 										_username
 										)
-	#sftp.put(local_sas_file,'wrds_dicts.sas')
 	sas_command = 'sas -noterminal wrds_dicts.sas'
 	#[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _username)
 	(stdin, stdout, stderr) = ssh.exec_command(sas_command)
@@ -932,7 +902,6 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 	remote_list = fdict.keys()
 	#remote_list = sftp.listdir()
 	if exit_status in [0, 1] and 'wrds_dicts.lst' in remote_list:
-		#sftp.get(remotepath=remote_path, localpath=local_path)
 		(get_success, ssh, sftp, dt) = _try_get(ssh,
 												sftp,
 												domain=_domain,
@@ -990,37 +959,66 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
 	if not dname:
 		dname = os.getcwd()
 	isready = 1
-	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv','',fname)
+	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv', '', fname)
 
-	if os.path.exists(os.path.join(dname,fname+'.tsv')):
+	if os.path.exists(os.path.join(dname, fname+'.tsv')):
 		isready = 0
 
 	#rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
 	flist0 = os.listdir(dname)
-	flist0 = [x for x in flist0 if x.endswith('.tsv')]
-	flist0 = [x for x in flist0 if re.search(fname0,x)]
-	fdict  = {x: x.split('rows')[-1] for x in flist0}
-	fdict  = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
-	fdict  = {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
-	flist  = [[fdict[x],x] for x in fdict]
+	flist0 = [x for x in flist0 if x.endswith('.tsv') and fname0 in x]
+	#flist0 = [x for x in flist0 if re.search(fname0, x)]
+	fdict  = {x: x.split('rows')[-1].split('.tsv')[0] for x in flist0}
+	fdict  = {x: re.split('_?to_?', fdict[x]) for x in fdict}
+	fdict  = {x: (int(fdict[x][0]), int(fdict[x][1])) for x in fdict}
 
-	if isready and flist == []:
+	rdict = {fdict[x]: x for x in fdict}
+	rkeys = rdict.keys()
+	rkeys.sort()
+
+	if not rkeys:
 		isready = 0
-		if suppress == 0:
-			logger.warning('recombine_ready: No such files found: '+fname)
+		logger.warning('No files found for: '+fname)
+		return isready
 
-	numlist = [x[0] for x in sorted(flist)]
-	missing_nums = [x for x in numlist if x != 1]
-	missing_nums = [x for x in missing_nums if x - rows_per_file not in numlist]
-
-	if isready and missing_nums != []:
+	if rkeys[0][0] != 1:
 		isready = 0
-		if suppress == 0:
-			logger.warning('recombine_ready: '+fname
-				+' missing_nums '+str(missing_nums+numlist))
+		logger.warning('Missing file with first line number 1: '+fname)
+		return isready
 
-	end_nums = [re.sub('\.tsv$','',x[1]) for x in flist]
-	end_nums = [re.split('to',x)[-1] for x in end_nums]
+	not_adjacent = [n for n in range(1, len(rkeys)) if rkeys[n][0] != rkeys[n-1][1]+1]
+	if not_adjacent:
+		missing_end_lines = [str(rkeys[n][0]-1) for n in not_adjacent]
+		isready = 0
+		logger.warning('Missing files with ending line numbers: '
+			+','.join(missing_end_lines)
+			+'; '+fname
+			)
+		return isready
+
+	#fdict  = {x: re.split('_?to_?', fdict[x])[0] for x in fdict}
+	#fdict  = {x: int(fdict[x]) for x in fdict if fdict[x].isdigit()}
+	#flist  = [[fdict[x], x] for x in fdict]
+	#
+	#if isready and flist == []:
+	#	isready = 0
+	#	if suppress == 0:
+	#		logger.warning('recombine_ready: No such files found: '+fname)
+
+	#numlist = [x[0] for x in sorted(flist)]
+	#missing_nums = [x for x in numlist if x != 1]
+	#missing_nums = [x for x in missing_nums if x - rows_per_file not in numlist]
+	#
+	#if isready and missing_nums != []:
+	#	isready = 0
+	#	if suppress == 0:
+	#		logger.warning('recombine_ready: '+fname
+	#			+' missing_nums '+str(missing_nums+numlist)
+	#			)
+
+	# @TODO: Can the rest of this be deprecated?
+	end_nums = [re.sub('\.tsv$', '', x[1]) for x in flist]
+	end_nums = [re.split('to', x)[-1] for x in end_nums]
 	end_nums = [float(x) for x in end_nums]
 
 	if isready and end_nums != [] and max(end_nums)%rows_per_file == 0:
@@ -1028,13 +1026,14 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
 		flist2 = [x[1] for x in flist if x[1].endswith(str(max_num)+'.tsv')]
 		if len(flist2) == 1:
 			outfile = flist2[0]
-			numlines = get_numlines(os.path.join(dname,outfile))
+			numlines = get_numlines(os.path.join(dname, outfile))
 			log_numlines = get_numlines_from_log(outfile, dname)
 			if numlines != log_numlines:
 				isready = 0
 				logger.warning('recombine_ready: '+outfile
 					+' numlines!=log_numlines: '
-					+str([numlines,log_numlines]))
+					+str([numlines, log_numlines])
+					)
 		else:
 			isready = 0
 			if suppress == 0:
@@ -1064,10 +1063,10 @@ def recombine_files(fname, rows_per_file, dname=None, suppress=0):
 	if not _recombine_ready(fname, rows_per_file, dname, suppress):
 		return combined_files
 
-	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv','',fname)
+	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv', '', fname)
 	#rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
 
-	flist0 = [x for x in os.listdir(dname) if re.search(fname0,x)]
+	flist0 = [x for x in os.listdir(dname) if re.search(fname0, x)]
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]
 	fdict  = {x: x.split('rows')[-1] for x in flist0}
 	fdict  = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}

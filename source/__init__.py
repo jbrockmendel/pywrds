@@ -49,7 +49,12 @@ user_info = wrdslib.user_info
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+formatter = logging.Formatter(log_format)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 import os
 _pywrds_dir = os.path.join(os.path.expanduser('~'), '.pywrds')
