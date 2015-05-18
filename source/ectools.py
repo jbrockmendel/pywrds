@@ -998,7 +998,7 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
 
 	#fdict  = {x: re.split('_?to_?', fdict[x])[0] for x in fdict}
 	#fdict  = {x: int(fdict[x]) for x in fdict if fdict[x].isdigit()}
-	#flist  = [[fdict[x], x] for x in fdict]
+	flist  = [[fdict[x], x] for x in fdict]
 	#
 	#if isready and flist == []:
 	#	isready = 0
@@ -1030,14 +1030,14 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
 			log_numlines = get_numlines_from_log(outfile, dname)
 			if numlines != log_numlines:
 				isready = 0
-				logger.warning('recombine_ready: '+outfile
+				logger.warning(outfile
 					+' numlines!=log_numlines: '
 					+str([numlines, log_numlines])
 					)
 		else:
 			isready = 0
 			if suppress == 0:
-				logger.warning('recombine_ready: '+fname
+				logger.warning(fname
 					+' appears incomplete: '+str(max(end_nums))
 					)
 	return isready
@@ -1069,7 +1069,7 @@ def recombine_files(fname, rows_per_file, dname=None, suppress=0):
 	flist0 = [x for x in os.listdir(dname) if re.search(fname0, x)]
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]
 	fdict  = {x: x.split('rows')[-1] for x in flist0}
-	fdict  = {x: re.split('_?to_?',fdict[x])[0] for x in fdict}
+	fdict  = {x: re.split('_?to_?', fdict[x])[0] for x in fdict}
 	fdict  = {x: float(fdict[x]) for x in fdict if fdict[x].isdigit()}
 	flist  = [[fdict[x], x] for x in fdict]
 
