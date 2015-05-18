@@ -409,6 +409,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 	file_sizes = [initial_file.st_size for initial_file in initial_files]
 	total_file_size = sum(file_sizes)
 	if total_file_size > 5*10**8:
+		# @TODO: use wrdslib.check_quota to get accurate parameters
 		MBs = int(float(total_file_size)/1000000.)
 		logger.info.write('You are using approximately '+str(MBs)
 			+ ' megabytes of your 1 GB'
