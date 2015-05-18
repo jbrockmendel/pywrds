@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """ Parameters describing the databases on the WRDS server.  Largely checked
 manually and so likely incomplete and subject to change.
+
+last edit: 2015-05-18
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
-
-__author__ = 'cpt'
-__guy_who_changed_stuff__ = 'brock'
 
 wrds_domain = 'wrds.wharton.upenn.edu'
 
@@ -21,13 +20,16 @@ autoexec_text = ("*  The library name definitions below are used by SAS;\n"
     +"\n\n   %include '!SASROOT/wrdslib.sas' ;\n\n\n"
     )
 
-WRDS_USER_QUOTA = 5*10**8
+# Deprecated in favor of wrdslib.check_quota, which actually finds the
+# user's quota instead of assuming all accounts have the same default quota.
+#WRDS_USER_QUOTA = 5*10**8
 
 
 
 # first_dates is an estimate of the first date YYYYMMDD on        #
 # which data is available for a given WRDS dataset.               #
 first_dates = {
+    "issm.nyam_qt": 19830000,
     "taq.div": 19930000,
     "taq.mast": 19930000,
     "taq.RGSH": 20050100,
@@ -95,6 +97,7 @@ first_date_guesses = {
 
 # date_vars gives the label that each dataset uses for its date variables   #
 date_vars = {
+    "issm.nyam_qt": "date",
     "optionm.opprcd": "date"
 }
 date_var_guesses = {

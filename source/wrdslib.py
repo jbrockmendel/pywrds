@@ -7,7 +7,7 @@ provide information specific to the WRDS SAS system.
 last edit: 2015-05-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
-import datetime, os, re, stat, sys, time
+import datetime, os, re, sys, time
 import logging
 logger = logging.getLogger(__name__)
 
@@ -29,9 +29,9 @@ this_file = os.path.abspath(__file__)
 user_path = this_file.split('source')[0]
 user_info_filename = os.path.join(user_path,'user_info.txt')
 if os.path.exists(user_info_filename):
-	fd = open(user_info_filename,'r') # r instead of rb for Python3 compatibility
-	content = fd.read()
-	fd.close()
+	with open(user_info_filename, 'r') as fd:
+		# r instead of rb for Python3 compatibility
+		content = fd.read()
 	content = content.replace(u'\xe2\x80\x9c', u'"')
 	content = content.replace(u'\xe2\x80\x9d', u'"')
 	# Fix "smart" quotes sometimes inserted by text editors.
@@ -67,16 +67,16 @@ if 'last_wrds_download' not in user_info.keys():
 	user_info['last_wrds_download'] = {}
 last_wrds_download = user_info['last_wrds_download']
 
+
+
+
+
+
+
+
+
+
 ################################################################################
-
-
-
-
-
-
-
-
-
 def check_quota(ssh):
 	"""check_quota(ssh)
 
@@ -106,7 +106,7 @@ def check_quota(ssh):
 		#assert len(split_lines[1]) == len(split_lines[2])
 		#fdict = {split_lines[1][n]: split_lines[2][n] for n in range(len(split_lines[1]))}
 
-		assert split_lines[1][1:4] == ('usage', 'quota', 'limit')
+		assert split_lines[1][1:4] == ['usage', 'quota', 'limit'], split_lines
 		(usage, quota, limit) = split_lines[2][1:4]
 		try:
 			usage = int(usage)
@@ -120,10 +120,14 @@ def check_quota(ssh):
 			limit = int(limit)
 		except ValueError:
 			pass
+		if all(isinstance(var,int) for var in [usage, quota, limit]):
+			user_info['usage'] = usage
+			user_info['quota'] = quota
+			user_info['limit'] = limit
 
 	else:
-		# Fall back to manually checking the sum size of files in the user
-		# directory.
+		# @TODO: Fall back to manually checking the sum size of files in the
+		# user directory.
 		pass
 	return (usage, quota, limit)
 
@@ -137,9 +141,33 @@ def check_quota(ssh):
 
 
 
+################################################################################
+def estimate_bytes_per_line(dataset):
+	# Until something smarter is implemented, use 1024 as a conservative bound
+	# This bound seems to work for, say, tfn.s34 which has lines of ~140 chars
+	# but may fail for, say, compustat.fundq which has lines of ~2100 chars
+	return 1024
 
 
+default_max_usage = .5
+def adjust_rows_using_quota(dataset, ssh):
+	(usage, quota, limit) = check_quota(ssh)
+	rows_per_file = rows_per_file_adjusted(dataset)
 
+	if not isinstance(usage,int) or not isinstance(quota, int):
+		# No useful info from the quota check.
+		return rows_per_file
+
+	free_bytes = (quota - usage)*1024
+
+	if free_bytes <= 0:
+		# @TODO: warn, stop download
+		pass
+
+	bytes_per_line = estimate_bytes_per_line(dataset)
+
+	new_num_lines = int(free_bytes*default_max_usage/bytes_per_line)
+	return new_num_lines
 
 ################################################################################
 def rows_per_file_adjusted(dataset):
@@ -336,9 +364,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 	sas_file = sas_file + '.sas'
 
 	(dataset, output_file) = fix_input_name(dataset, Y, M, D, R)
-	fd = open(os.path.join(download_path, sas_file), 'wb')
-	fd.write('DATA new_data;\n')
-	fd.write('\tSET '+dataset)
+
 	if Y != 'all':
 		where_query = ' (where = ('
 		year_query = ('(year('+wrds_datevar(dataset)+')'
@@ -356,29 +382,68 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 			where_query = where_query+day_query
 
 		where_query = where_query+'));\n'
-		fd.write(where_query)
 	else:
-		fd.write(';\n')
+		where_query = ';\n'
 
+
+	rowquery = ''
 	if R != []:
-		rowquery = ('\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n')
-		fd.write(rowquery)
+		rowquery = '\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n'
 
-	fd.write('\n')
-	fd.write('proc export data = new_data\n')
-	fd.write(('\toutfile = "~/'+output_file+'" \n'
-		+'\tdbms = tab \n'
-		+'\treplace; \n'
-		+'\tputnames = yes; \n'
-		+'run; \n')
-	)
-	fd.close()
-
-	os.chmod(fd.name,
-		(stat.S_IRUSR + stat.S_IWUSR + stat.S_IXUSR
-		+ stat.S_IRGRP + stat.S_IWGRP + stat.S_IXGRP
-		+ stat.S_IROTH + stat.S_IWOTH + stat.S_IXOTH)
+	sas_content = ('DATA new_data;\n'
+		+ '\tSET ' + dataset
+		+ where_query
+		+ rowquery + '\n'
+		+ 'proc export data = new_data\n'
+		+ '\toutfile = "~/'+output_file+'" \n'
+		+ '\tdbms = tab \n'
+		+ '\treplace; \n'
+		+ '\tputnames = yes; \n'
+		+ 'run; \n'
 		)
+
+	with open(os.path.join(download_path, sas_file), 'wb') as fd:
+		fd.write(sas_content)
+
+#	fd = open(os.path.join(download_path, sas_file), 'wb')
+#	fd.write('DATA new_data;\n')
+#	fd.write('\tSET '+dataset)
+#	if Y != 'all':
+#		where_query = ' (where = ('
+#		year_query = ('(year('+wrds_datevar(dataset)+')'
+#			+' between '+str(Y)+' and '+str(Y)+')')
+#		where_query = where_query + year_query
+#
+#		if M != 0:
+#			month_query = (' and (month('+wrds_datevar(dataset)
+#				+') between '+str(M)+' and '+str(M)+')')
+#			where_query = where_query+month_query
+#
+#		if D != 0:
+#			day_query = (' and (day('+wrds_datevar(dataset)
+#				+') between '+str(D)+' and '+str(D)+')')
+#			where_query = where_query+day_query
+#
+#		where_query = where_query+'));\n'
+#		fd.write(where_query)
+#	else:
+#		fd.write(';\n')
+#
+#	if R != []:
+#		rowquery = ('\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n')
+#		fd.write(rowquery)
+#
+#	fd.write('\n')
+#	fd.write('proc export data = new_data\n')
+#	fd.write(('\toutfile = "~/'+output_file+'" \n'
+#		+'\tdbms = tab \n'
+#		+'\treplace; \n'
+#		+'\tputnames = yes; \n'
+#		+'run; \n')
+#	)
+#	fd.close()
+
+	os.chmod(os.path.join(download_path, sas_file), 777)
 	return (sas_file, output_file, dataset)
 ################################################################################
 
@@ -401,9 +466,9 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 		if 'last_wrds_download' not in user_info.keys():
 			user_info['last_wrds_download'] = {}
 		user_info['last_wrds_download'][dataset] = year*10000 + month*100 + day
-		fd = open(user_info_filename, 'wb')
-		fd.write(json.dumps(user_info, indent=4))
-		fd.close()
+		content = json.dumps(user_info, indent=4)
+		with open(user_info_filename, 'wb') as fd:
+			fd.write(content)
 	else:
 		logger.error('Could not retrieve: ' + fname)
 	return
@@ -413,7 +478,6 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
 
 
 ################################################################################
-
 def min_YMD(min_date, dataset):
 	"""min_YMD(min_date, dataset)
 
@@ -525,6 +589,7 @@ def wrds_datevar(filename):
 
 	return date_var
 	"""
+	# @TODO: Find these programatically.
 	if filename in ['tfn.s12','tfn.s34']:
 		return 'fdate'
 	if re.search('^crsp',filename):
@@ -581,9 +646,9 @@ def get_wrds_institution(ssh, sftp):
 		if wrds_institution == []:
 			wrds_institution = institution_path
 			user_info['wrds_institution'] = wrds_institution
-			fd = open(user_info_filename,'wb')
-			fd.write(json.dumps(user_info, indent=4))
-			fd.close()
+			content = json.dumps(user_info, indent=4)
+			with open(user_info_filename, 'wb') as fd:
+				fd.write(content)
 		else:
 			logger.warning('user_info["wrds_institution"] does not '
 				+ 'match the directory "'+institution_path+'" '
@@ -594,7 +659,4 @@ def get_wrds_institution(ssh, sftp):
 	return institution_path
 
 
-
-
-################################################################################
 

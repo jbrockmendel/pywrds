@@ -13,8 +13,15 @@ last edit: 2015-05-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time
+
 import logging
 logger = logging.getLogger(__name__)
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+formatter = logging.Formatter(log_format)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 ################################################################################
 from . import sshlib, wrdslib
 
@@ -65,7 +72,11 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 	"""
 	keep_going = 1
 	[startrow, numfiles, total_rows, tic] = [1, 0, 0, time.time()]
-	rows_per_file = wrdslib.rows_per_file_adjusted(dataset)
+
+	(ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
+	rows_per_file = wrdslib.adjust_rows_using_quota(dataset, ssh)
+	#rows_per_file = wrdslib.rows_per_file_adjusted(dataset)
+
 	(dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
 	if os.path.exists(os.path.join(_dlpath, outfile)):
 		keep_going = 0
@@ -122,7 +133,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 					if recombine == 1:
 						subfrom = 'rows[0-9]*to[0-9]*\.tsv'
 						recombine_name = re.sub(subfrom, '', outfile)
-						recombine_files(recombine_name, dname=_dlpath)
+						recombine_files(recombine_name, rows_per_file, dname=_dlpath)
 				else:
 					startrow += rows_per_file
 					newname = outfile
@@ -251,7 +262,12 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
 			remote_size = _wait_for_sas_file_completion(ssh, sftp, outfile)
 			(get_success, dt) = _retrieve_file(ssh, sftp, outfile, remote_size)
 			local_size = _wait_for_retrieve_completion(outfile, get_success)
-			compare_success = _compare_local_to_remote(ssh, sftp, outfile, remote_size, local_size)
+			compare_success = _compare_local_to_remote(ssh,
+													sftp,
+													outfile,
+													remote_size,
+													local_size
+													)
 
 	#(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
 	checkfile = os.path.join(_dlpath, outfile)
@@ -446,7 +462,13 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
 	local_path = os.path.join(_dlpath, sas_file)
 	remote_path = sas_file
-	(put_success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, _domain, _username)
+	(put_success, ssh, sftp) = _try_put(local_path,
+										remote_path,
+										ssh,
+										sftp,
+										_domain,
+										_username
+										)
 	return put_success
 
 
@@ -954,8 +976,8 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
 
 
 ################################################################################
-def _recombine_ready(fname, dname=None, suppress=0):
-	"""_recombine_ready(fname, dname=None, suppress=0)
+def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
+	"""_recombine_ready(fname, rows_per_file, dname=None, suppress=0)
 
 	Checks files downloaded by get_wrds to see if the loop has completed
 	successfully and the files are ready to be be recombined.
@@ -972,7 +994,7 @@ def _recombine_ready(fname, dname=None, suppress=0):
 	if os.path.exists(os.path.join(dname,fname+'.tsv')):
 		isready = 0
 
-	rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
+	#rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
 	flist0 = os.listdir(dname)
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]
 	flist0 = [x for x in flist0 if re.search(fname0,x)]
@@ -988,7 +1010,7 @@ def _recombine_ready(fname, dname=None, suppress=0):
 
 	numlist = [x[0] for x in sorted(flist)]
 	missing_nums = [x for x in numlist if x != 1]
-	missing_nums = [x for x in missing_nums if x-rows_per_file not in numlist]
+	missing_nums = [x for x in missing_nums if x - rows_per_file not in numlist]
 
 	if isready and missing_nums != []:
 		isready = 0
@@ -1025,8 +1047,8 @@ def _recombine_ready(fname, dname=None, suppress=0):
 
 
 ################################################################################
-def recombine_files(fname, dname=None, suppress=0):
-	"""recombine_files(fname, dname=None, suppress=0)
+def recombine_files(fname, rows_per_file, dname=None, suppress=0):
+	"""recombine_files(fname, rows_per_file, dname=None, suppress=0)
 
 	Reads the files downloaded by get_wrds and combines them back into the
 	single file of interest.
@@ -1038,11 +1060,11 @@ def recombine_files(fname, dname=None, suppress=0):
 	if not dname:
 		dname = os.getcwd()
 	combined_files = 0
-	if not _recombine_ready(fname, dname, suppress):
+	if not _recombine_ready(fname, rows_per_file, dname, suppress):
 		return combined_files
 
 	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv','',fname)
-	rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
+	#rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
 
 	flist0 = [x for x in os.listdir(dname) if re.search(fname0,x)]
 	flist0 = [x for x in flist0 if x.endswith('.tsv')]

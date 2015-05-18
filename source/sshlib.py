@@ -4,7 +4,7 @@
 pywrds.sshlib is essentially a wrapper around paramiko for interacting with
 remote servers via SSH and SFTP.  Nothing in sshlib is specific to WRDS.
 
-last edit: 2015-05-17
+last edit: 2015-05-18
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
@@ -54,19 +54,20 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 	if not ssh:
 		ssh = paramiko.SSHClient()
 		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-		handler = logging.StreamHandler()
-        transport = ssh.get_transport()
-        logger = transport.logger
-        logger.addHandler(handler)
-
 		key_filename = find_ssh_key(0)
 		for port in ports:
 			try:
 				ssh.connect(domain,
 					username=username,
 					port=port,
-					key_filename=key_filename)
+					key_filename=key_filename
+					)
+
+				handler = logging.StreamHandler()
+				transport = ssh.get_transport()
+				tlogger = transport.logger
+				tlogger.addHandler(handler)
+
 				sftp = ssh.open_sftp()
 				break
 			except paramiko.AuthenticationException:
@@ -75,10 +76,17 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 					+'server '+str(domain) + ' failed, attempting '
 					+'password-based authentication')
 				try:
-					prompt = repr(domain)+' password: '
+					prompt = str(domain)+' password: '
 					ssh.connect(domain,
 						username=username,
-						password=quick_password(prompt=prompt))
+						password=quick_password(prompt=prompt)
+						)
+
+					handler = logging.StreamHandler()
+					transport = ssh.get_transport()
+					tlogger = transport.logger
+					tlogger.addHandler(handler)
+
 					sftp = ssh.open_sftp()
 					break
 				except paramiko.AuthenticationException:
@@ -174,23 +182,22 @@ def ssh_keygen():
 	priv_write = pub_read and os.access(priv_path, os.W_OK)
 
 	# @TODO: warn and return in cases of permission problems.
-	pub_ROK = 'id_rsa.pub' in ssh_dirlist and os.access()
 	if 'id_rsa' not in ssh_dirlist and 'id_rsa.pub' not in ssh_dirlist:
 		key = Crypto.PublicKey.RSA.generate(2048)
-		fd = open(os.path.join(ssh_dir,'id_rsa'),'wb')
-		fd.write(key.exportKey())
-		fd.close()
-		fd = open(os.path.join(ssh_dir,'id_rsa.pub'),'wb')
-		fd.write(key.publickey().exportKey('OpenSSH'))
-		fd.close()
-		os.chmod(os.path.join(ssh_dir, 'id_rsa'), 600)
-		os.chmod(os.path.join(ssh_dir, 'id_rsa.pub'), 600)
-		os.chmod(ssh_dir,700)
+		with open(priv_path, 'wb') as fd:
+			fd.write(key.exportKey())
+
+		with open(pub_path, 'wb') as fd:
+			fd.write(key.publickey().exportKey('OpenSSH'))
+
+		os.chmod(priv_path, 600)
+		os.chmod(pub_path, 600)
+		os.chmod(ssh_dir, 700)
 		home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
 		os.chmod(home_dir,700)
 	elif 'id_rsa' in ssh_dirlist:
-        with open(priv_path, 'rb') as fd:
-            private_key = fd.read()
+		with open(priv_path, 'rb') as fd:
+			private_key = fd.read()
 		# begin unmerged lines from cpt branch
         ## BUG: PyCrypto not working with password encrypted keys, see
         ## http://stackoverflow.com/questions/20613946/how-can-i-read-a-standard-openssl-rsa-private-key-with-pycrypto-and-decrypt-with
@@ -200,9 +207,9 @@ def ssh_keygen():
         # here in this "elif" block is commented out in that branch.
 		pk = Crypto.PublicKey.RSA.importKey(private_key)
 		public_key = pk.publickey().exportKey('OpenSSH')
-		fd = open(pub_path, 'wb')
-		fd.write(public_key)
-		fd.close()
+		with open(pub_path, 'wb') as fd:
+			fd.write(public_key)
+
 		os.chmod(priv_path, 600)
 		os.chmod(pub_path, 600)
 		os.chmod(ssh_dir, 600)
@@ -273,7 +280,8 @@ def put_ssh_key(domain, username):
 	except:# paramiko.AuthenticationException:
 		(ssh, sftp) = [None, None]
 		logger.error('paramiko could not connect to the server '+str(domain)
-			+' with username '+str(username))
+			+' with username '+str(username)
+			)
 
 	if not sftp:
 		logger.error('Connection to domain '+domain+' failed, '
