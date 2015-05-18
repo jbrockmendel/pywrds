@@ -42,12 +42,12 @@ if os.path.exists(user_info_filename):
 		logger.warning('pywrds.wrdslib warning: user_info.txt file does not '
 			+ 'conform to json format.  Please address this '
 			+ 'and reload ectools.'
-		)
+			)
 else:
 	logger.warning('pywrds.wrdslib warning: Please create a user_info.txt '
 		+ 'file conforming to the format given in the '
 		+ 'user_info_example.txt file.'
-	)
+		)
 
 
 ################################################################################
@@ -169,6 +169,7 @@ def adjust_rows_using_quota(dataset, ssh):
 	new_num_lines = int(free_bytes*default_max_usage/bytes_per_line)
 	return new_num_lines
 
+
 ################################################################################
 def rows_per_file_adjusted(dataset):
 	"""rows_per_file_adjusted(dataset)
@@ -268,7 +269,7 @@ def fix_weekdays(ymds, weekdays=1):
 
 	return ymds
 	"""
-	# @TODO: holidays
+	# @TODO: holidays, see pypi's "holidays"
 	ymds2 = []
 	for [y, m, d] in ymds:
 		try:
@@ -302,6 +303,7 @@ def fix_input_name(dataset, year, month, day, rows=[]):
 
 	return (dataset, output_file)
 	"""
+	# @TODO use dictionary.tables to get this right automatically
 	(Y, M, D, R) = (year, month, day, rows)
 	if year != 'all':
 		ystr = '_'*(dataset[-1].isdigit())+str(Y)
@@ -486,6 +488,7 @@ def min_YMD(min_date, dataset):
 
 	return (min_year, min_month, min_day)
 	"""
+	# @TODO: use divmod to clean this up
 	if dataset in _get_all:
 		return (-1, -1, -1)
 
@@ -616,7 +619,7 @@ def setup_wrds_key():
 	if not wrds_username:
 		logger.warning('setup_wrds_key() cannot run until wrds_username is '
 			+'specified in the user_info.txt file.'
-		)
+			)
 		return (None, None)
 	(ssh, sftp) = sshlib.put_ssh_key(domain=wrds_domain, username=wrds_username)
 	institution = get_wrds_institution(ssh, sftp)
@@ -654,7 +657,7 @@ def get_wrds_institution(ssh, sftp):
 				+ 'found on the wrds server.  '
 				+ 'This mismatch may cause errors '
 				+ 'in the download process.'
-			)
+				)
 	return institution_path
 
 

@@ -11,7 +11,7 @@ import getpass, os, re, signal, socket, string, sys, time
 import logging
 logger = logging.getLogger(__name__)
 ################################################################################
-#@Todo: Handle BadHostKeyException #
+# @TODO: Handle BadHostKeyException
 
 
 ################################################################################
