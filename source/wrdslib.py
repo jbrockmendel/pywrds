@@ -365,32 +365,31 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
 
 	(dataset, output_file) = fix_input_name(dataset, Y, M, D, R)
 
+	where_query = ';\n'
 	if Y != 'all':
-		where_query = ' (where = ('
-		year_query = ('(year('+wrds_datevar(dataset)+')'
-			+' between '+str(Y)+' and '+str(Y)+')')
-		where_query = where_query + year_query
+		dvar = wrds_datevar(dataset)
+		yquery = '(year('+dvar+') between '+str(Y)+' and '+str(Y)+')'
 
+		mquery = ''
 		if M != 0:
-			month_query = (' and (month('+wrds_datevar(dataset)
-				+') between '+str(M)+' and '+str(M)+')')
-			where_query = where_query+month_query
+			mquery = ' and (month('+dvar+') between '+str(M)+' and '+str(M)+')'
 
+		dquery = ''
 		if D != 0:
-			day_query = (' and (day('+wrds_datevar(dataset)
-				+') between '+str(D)+' and '+str(D)+')')
-			where_query = where_query+day_query
+			dquery = ' and (day('+dvar+') between '+str(D)+' and '+str(D)+')'
 
-		where_query = where_query+'));\n'
-	else:
-		where_query = ';\n'
-
+		where_query = ' (where = ('
+		where_query = where_query + yquery
+		where_query = where_query + mquery
+		where_query = where_query + dquery
+		where_query = where_query + '));\n'
 
 	rowquery = ''
 	if R != []:
 		rowquery = '\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n'
 
-	sas_content = ('DATA new_data;\n'
+	sas_content = (
+		'DATA new_data;\n'
 		+ '\tSET ' + dataset
 		+ where_query
 		+ rowquery + '\n'
