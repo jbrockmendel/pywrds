@@ -961,8 +961,12 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
 	isready = 1
 	fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv', '', fname)
 
-	if os.path.exists(os.path.join(dname, fname+'.tsv')):
+	if os.path.exists(os.path.join(dname, fname0+'.tsv')):
 		isready = 0
+		logger.warning('Re-combined file already exists, skipping recombine '
+			+ 'to avoid overwriting '+fname0+'.tsv'
+			)
+		return isready
 
 	#rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
 	flist0 = os.listdir(dname)
