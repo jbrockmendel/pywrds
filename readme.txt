@@ -222,7 +222,7 @@ VI) Installing Python and pywrds Dependencies
 
 		sudo apt-get install python
 		sudo apt-get install python-pip
-		sudo pip install pycrypto
+		sudo apt-get install python-crypto
 		sudo pip install paramiko
 
 
