@@ -156,7 +156,7 @@ VI) Installing Python and pywrds Dependencies
 
 		The ones you will need are:
 
-		pip install BeautifulSoup
+		pip install pycrypto
 		pip install paramiko
 
 		(See Figure 5 in the "install" directory)
@@ -202,7 +202,7 @@ VI) Installing Python and pywrds Dependencies
 
 		The ones you will need are:
 
-		pip install BeautifulSoup
+		pip install pycrypto
 		pip install paramiko
 
 		(See Figure 5 in the "install" directory)
@@ -210,10 +210,6 @@ VI) Installing Python and pywrds Dependencies
 		Note 1: In my limited experience with Windows, pip only works
 		if executed from the directory "C://Python27/Scripts".  This
 		may be different with Anaconda, I don’t know.
-
-		Note 2: If you use the Anaconda distribution of Python,
-		it comes with BeautifulSoup installed, but it is labelled
-		"bs4".
 
 
 	C) Linux
@@ -226,8 +222,7 @@ VI) Installing Python and pywrds Dependencies
 
 		sudo apt-get install python
 		sudo apt-get install python-pip
-		sudo pip install BeautifulSoup
-		sudo apt-get install python-crypto
+		sudo pip install pycrypto
 		sudo pip install paramiko
 
 
