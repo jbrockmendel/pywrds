@@ -40,7 +40,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 			pwd = sftp.getcwd()
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt
-		except:
+		except (IOError,EOFError,paramiko.SSHException):
 			sftp = None
 	if ssh and not sftp:
 		try:
@@ -48,7 +48,7 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
 			pwd = sftp.getcwd()
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt
-		except:
+		except (IOError,EOFError,paramiko.SSHException):
 			ssh  = None
 			sftp = None
 	if not ssh:
@@ -275,10 +275,16 @@ def put_ssh_key(domain, username):
 		sftp = ssh.open_sftp()
 	except KeyboardInterrupt:
 		raise KeyboardInterrupt
-	except:# paramiko.AuthenticationException:
+	except paramiko.AuthenticationException:
+		(ssh, sftp) = (None, None)
+		logger.error('paramiko.AuthenticationException, '
+			+ 'could not connect to the server '+str(domain)
+			+ ' with username '+str(username)
+			)
+	except (IOError,EOFError,paramiko.SSHException):
 		(ssh, sftp) = [None, None]
 		logger.error('paramiko could not connect to the server '+str(domain)
-			+' with username '+str(username)
+			+ ' with username '+str(username)
 			)
 
 	if not sftp:
@@ -401,7 +407,7 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 		except KeyboardInterrupt:
 			try:
 				sftp.remove(remote_path)
-			except:
+			except (IOError,EOFError,paramiko.SSHException):
 				pass
 			raise KeyboardInterrupt
 		except (IOError,EOFError,paramiko.SSHException):
@@ -707,7 +713,7 @@ has_modules = {}
 try:
 	import paramiko
 	has_modules['paramiko'] = 1
-except:
+except ImportError:
 	logger.warning('Some pywrds.sshlib'
 		+ ' functionality requires the package "paramiko".'
 		+ '  Please "pip install paramiko".  Otherwise some '
@@ -718,7 +724,7 @@ except:
 try:
 	import Crypto.PublicKey.RSA
 	has_modules['Crypto.PublicKey.RSA'] = 1
-except:
+except ImportError:
 	logger.warning('Some pywrds.sshlib'
 		+ ' functionality requires the package "Crypto.PublicKey.RSA".'
 		+ '  Please "pip install pycrypto".  Otherwise some '
