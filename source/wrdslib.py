@@ -18,7 +18,7 @@ except ImportError: import json
 from . import sshlib
 
 from .wrds_parameters import wrds_domain, _get_all, first_dates, first_date_guesses
-from .wrds_parameters import date_vars, date_var_guesses, autoexec_text
+from .wrds_parameters import date_vars, date_var_guesses, autoexec_text, bytes_per_line
 
 now = time.localtime()
 (this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
@@ -146,7 +146,8 @@ def estimate_bytes_per_line(dataset):
 	# Until something smarter is implemented, use 1024 as a conservative bound
 	# This bound seems to work for, say, tfn.s34 which has lines of ~140 chars
 	# but may fail for, say, compustat.fundq which has lines of ~2100 chars
-	return 1024
+	return bytes_per_line.get(dataset, 1024)
+	#return 1024
 
 
 default_max_usage = .5

@@ -142,3 +142,14 @@ dataset_list = [
     "comp.secd",
     "comp.g_secd"
 ]
+
+
+
+# Estimates of the number of characters per line in a given dataset
+bytes_per_line = {
+    "taq.mast": 95,
+    "ibes.det_xepsint": 184,
+    "taq.ct": 41,
+    "compusat.fundq": 2100,
+    "tfn.s34": 140
+}

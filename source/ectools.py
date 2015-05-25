@@ -139,7 +139,22 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 	return (numfiles, total_rows, ssh, sftp, time.time()-tic)
 
 
+def get_start_row(outfile):
+	"""get_start_row(outfile)
 
+	If a dataset has been partially downloaded by a previous run of get_wrds
+	that was not completed, find the last file that was downloaded
+	successfully to restart the loop in the right place without
+	re-downloading more than is necessary.
+
+	For example if outfile is optionm_opprcd201406.tsv and the output directory
+	contains sub-files up to and including
+	optionm_opprcd201406rows8059234to8443006.tsv, then start the loop at
+	start_row = 8443007.
+
+	return start_row
+	"""
+	return
 
 
 
