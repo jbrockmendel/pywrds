@@ -275,7 +275,6 @@ def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
                                                     local_size
                                                     )
 
-    #(got_log, ssh, sftp) = _get_log_file(ssh, sftp, log_file, sas_file)
     checkfile = os.path.join(_dlpath, outfile)
     if os.path.exists(checkfile) or exit_status == 0:
         return (1, ssh, sftp, time.time()-tic)
@@ -325,7 +324,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 
 
     for ymd in wrdslib.get_ymd_range(min_date, dataset, 1):
-        [Y, M, D] = ymd
+        (Y, M, D) = ymd
         (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
         if outfile in flist:
             continue
@@ -490,7 +489,7 @@ def _sas_step(ssh, sftp, sas_file, outfile):
 
     return exit_status
     """
-    [sas_completion, num_sas_trys, max_sas_trys] = [0, 0, 1] # changed 3 to 1 2015-05-24
+    (sas_completion, num_sas_trys, max_sas_trys) = (0, 0, 1) # changed 3 to 1 2015-05-24
     while sas_completion == 0 and num_sas_trys < max_sas_trys:
         exit_status = _run_sas_command(ssh, sftp, sas_file, outfile)
         num_sas_trys += 1
@@ -624,7 +623,7 @@ def _wait_for_sas_file_completion(ssh, sftp, outfile):
     ## i think this may be perfunctory in      ##
     ## the case where exit_status = 0          ##
     ## indicates the process is done, not sure ##
-    [measure1, measure2, mtime, waited2, maxwait2] = [0, 1, time.time(), 0, 1200]
+    (measure1, measure2, mtime, waited2, maxwait2) = (0, 1, time.time(), 0, 1200)
     while sftp and ((waited2 < maxwait2)
         and (measure1 != measure2 or (time.time() - mtime <= 10))):
         measure1 = measure2
@@ -635,7 +634,7 @@ def _wait_for_sas_file_completion(ssh, sftp, outfile):
             measure2 = output_stat.st_size
             mtime = output_stat.st_mtime
         except (IOError,EOFError,paramiko.SSHException):
-            [ssh, sftp] = getSSH(ssh, sftp, domain=_domain, username=_username)
+            (ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
 
 
     if waited2 >= maxwait2:
@@ -677,7 +676,8 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
         return (0, time.time()-tic)
 
     [get_success, numtrys, maxtrys] = [0, 0, 3]
-    remote_path = os.path.join(wrdslib._out_dir, outfile).replace('~/','') # Not sure why but sftp.get doesn't like '~/' in remote_path
+    remote_path = os.path.join(wrdslib._out_dir, outfile).replace('~/','')
+    # Not sure why but sftp.get doesn't like '~/' in remote_path
     #remote_path = ('/home/'+_institution+'/'+_username+'/'+outfile)
     write_file = '.'+outfile+'--writing'
     local_path = os.path.join(os.path.expanduser('~'), write_file)
@@ -717,7 +717,7 @@ def _wait_for_retrieve_completion(outfile, get_success, maxwait=1200):
     if get_success == 0:
         return 0
     waited3 = 0
-    [locmeasure1, locmeasure2, mtime2] = [0, 1, time.time()]
+    (locmeasure1, locmeasure2, mtime2) = (0, 1, time.time())
     write_file = '.'+outfile+'--writing'
     local_path = os.path.join(os.path.expanduser('~'),write_file)
     while ((waited3 < maxwait)
@@ -903,7 +903,6 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
                                         _username
                                         )
     sas_command = 'sas -noterminal wrds_dicts.sas'
-    #[exec_succes, stdin, stdout, stderr, ssh, sftp] = _try_exec(sas_command, ssh, sftp, _domain, _username)
     (stdin, stdout, stderr) = ssh.exec_command(sas_command)
     exit_status = -1
     while exit_status == -1:
@@ -914,7 +913,6 @@ def find_wrds(dataset_name, ssh=None, sftp=None):
     remote_path = '/home/'+_institution+'/'+_username+'/wrds_dicts.lst'
     (ssh, sftp, fdict) = _try_listdir('.', ssh, sftp, _domain, _username)
     remote_list = fdict.keys()
-    #remote_list = sftp.listdir()
     if exit_status in [0, 1] and 'wrds_dicts.lst' in remote_list:
         (get_success, ssh, sftp, dt) = _try_get(ssh,
                                                 sftp,
