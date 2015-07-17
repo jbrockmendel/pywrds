@@ -501,13 +501,9 @@ def min_YMD(min_date, dataset):
     if dataset in _get_all:
         return (-1, -1, -1)
 
-    if 'last_wrds_download' not in user_info:
-        user_info['last_wrds_download'] = {}
-    if dataset not in user_info['last_wrds_download']:
-        if dataset in first_dates:
-            user_info['last_wrds_download'][dataset] = first_dates[dataset]
-        else:
-            user_info['last_wrds_download'][dataset] = 18000000
+    last_download = user_info.setdefault('last_wrds_download', {})
+    dataset_1st_date = first_dates.get(dataset, 18000000)
+    dataset_last_download = last_download.setdefault(dataset, dataset_1st_date)
 
     if not isinstance(min_date,(int,float)):
         min_date = 0
