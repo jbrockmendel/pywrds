@@ -497,7 +497,6 @@ def min_YMD(min_date, dataset):
 
     return (min_year, min_month, min_day)
     """
-    # @TODO: use divmod to clean this up
     if dataset in _get_all:
         return (-1, -1, -1)
 
@@ -510,15 +509,14 @@ def min_YMD(min_date, dataset):
 
     if min_date == 0:
         min_date = user_info['last_wrds_download'][dataset]
-        min_date = str(min_date)
-        if not min_date.isdigit() or len(min_date) != 8:
-            min_date = 0
+        if not str(min_date.isdigit()) or len(str(min_date)) != 8:
             logger.warning('user_info["last_wrds_download"]["'+dataset+'"]='
-                +min_date+' error, should be an eight digit integer.'
+                +str(min_date)+' error, should be an eight digit integer.'
             )
-        min_year = int(min_date[:4])
-        min_month = int(min_date[4:6])
-        min_day = int(min_date[6:])
+             min_date = 0
+        min_date = int(min_date)
+        (min_year, leftover) = divmod(min_date, 10000)
+        (min_month, min_day) = divmod(leftover, 100)
         if min_month == min_day == 0:
             min_year += 1
         elif min_day == 0:
@@ -539,6 +537,7 @@ def min_YMD(min_date, dataset):
 
     if min_date != 0:
         if min_date < 1880:
+            # Likely invalid min_date
             min_day = 0
             min_month = 0
             min_year = 1880
@@ -550,36 +549,34 @@ def min_YMD(min_date, dataset):
                 + 'Brock know so he can update the code appropriately.'
             )
         elif min_date < 2050:
+            # 4-digit min_date
             min_day = 0
             min_month = 0
             min_year = int(min_date)
         elif 188000 < min_date < 1880000:
-            min_month = min_date%100
-            min_year = (min_date-(min_date%100))/100
+            # 6-digit min_date
+            (min_year, min_month) = divmod(min_date, 100)
         elif min_date < 20500000:
-            min_day = min_date%100
-            min_month = (min_date%10000-min_day)/100
-            min_year = (min_date-(min_date%10000))/10000
+            (min_year, leftover) = divmod(min_date, 10000)
+            (min_month, min_day) = divmod(leftover, 100)
 
     if min_date == 0:
-        if dataset in first_dates.keys():
-            min_day = first_dates[dataset]%100
-            min_month = ((first_dates[dataset]-min_day)%10000)/100
-            min_year = (first_dates[dataset]-100*min_month-min_day)/10000
-        elif any(re.search(x,dataset) for x in first_date_guesses.keys()):
-            key = [x for x in first_date_guesses.keys()
-                if re.search(x,dataset)][0]
-            if dataset in first_date_guesses.keys():
-                key = dataset
-                if first_date_guesses[key] == -1:
-                    return [-1, -1, -1]
-            min_day = first_date_guesses[key]%100
-            min_month = ((first_date_guesses[key]-min_day)%10000)/100
-            min_year = (first_date_guesses[key]-100*min_month-min_day)/10000
+        if dataset in first_dates:
+            min_date = first_dates[dataset]
+        elif dataset in first_date_guesses:
+            min_date = first_date_guesses[dataset]
+        elif any(re.search(x,dataset) for x in first_date_guesses):
+            key = [x for x in first_date_guesses if re.search(x,dataset)][0]
+            min_date = first_date_guesses[key]
         else:
-            min_day = 0
-            min_month = 0
-            min_year = 1880
+            min_date = 18000000
+
+        if min_date == -1:
+            return (-1,-1,-1)
+
+        (min_year, leftover) = divmod(min_date, 10000)
+        (min_month, min_day) = divmod(leftover, 100)
+
 
     return (min_year, min_month, min_day)
 
