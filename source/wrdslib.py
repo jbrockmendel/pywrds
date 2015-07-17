@@ -4,7 +4,7 @@
 pywrds.wrdslib is a collection of functions used by ectools which use or
 provide information specific to the WRDS SAS system.
 
-last edit: 2015-05-17
+last edit: 2015-07-17
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, os, re, sys, time
