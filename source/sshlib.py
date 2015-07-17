@@ -247,8 +247,8 @@ def put_ssh_key(domain, username):
     return (ssh, sftp)
     """
     if not has_modules['paramiko']:
-        logger.warning('sshlib.put_ssh_key is unavailable without dependency "paramiko"'
-            +'  Returning [None, None].')
+        logger.warning('sshlib.put_ssh_key is unavailable without '
+            + 'dependency "paramiko".  Returning (None, None).')
         return (None, None)
 
     key_path = ssh_keygen()
@@ -317,7 +317,7 @@ def put_ssh_key(domain, username):
         sftp = ssh.open_sftp()
         success = 1
     except paramiko.AuthenticationException:
-        [error_type, error_value, error_traceback] = sys.exc_info()
+        (error_type, error_value, error_traceback) = sys.exc_info()
         logger.error('Passwordless login was unsuccessful.  '
             + 'Debugging information follows...\n'
             + 'error_type='+str(error_type)+'\n'
@@ -377,11 +377,26 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
     [success, num_trys, max_trys] = [0, 0, 3]
     (dname, fname) = os.path.split(local_path)
 
-    (ssh, sftp, go_on, success) = _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, lag)
+    (ssh, sftp, go_on, success) = _check_stats(local_path,
+                                            remote_path,
+                                            ssh,
+                                            sftp,
+                                            domain,
+                                            username,
+                                            ports,
+                                            lag
+                                            )
     if not go_on:
         return (ssh, sftp, success, time.time()-tic)
 
-    (success, ssh, sftp) = _try_put(local_path, remote_path, ssh, sftp, domain, username, ports)
+    (success, ssh, sftp) = _try_put(local_path,
+                                    remote_path,
+                                    ssh,
+                                    sftp,
+                                    domain,
+                                    username,
+                                    ports
+                                    )
     return (ssh, sftp, success, time.time()-tic)
 
 
@@ -397,7 +412,7 @@ def _try_put(local_path, remote_path, ssh, sftp, domain, username, ports=[22]):
 
     return (ssh, sftp, success)
     """
-    [success, numtrys, maxtrys] = [0, 0 ,3]
+    (success, numtrys, maxtrys) = (0, 0 ,3)
     local_stat = os.stat(local_path)
     while success == 0 and numtrys < maxtrys:
         try:
@@ -459,7 +474,7 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 
     local_stat = os.stat(local_path)
     time_diff = time.time() - local_stat.st_mtime
-    [waits, max_waits] = [0, 3]
+    (waits, max_waits) = (0, 3)
     while time_diff < lag and waits < max_waits:
         time.sleep(lag - time_diff)
         local_stat = os.stat(local_path)
@@ -477,7 +492,7 @@ def _check_stats(local_path, remote_path, ssh, sftp, domain, username, ports, la
 
     if remote_stat:
         time_diff = time.time() - remote_stat.st_mtime
-        [waits, max_waits] = [0, 3]
+        (waits, max_waits) = (0, 3)
         while  time_diff < lag and waits < max_waits:
             time.sleep(lag - time_diff)
             remote_stat = sftp.stat(remote_path)
@@ -517,7 +532,7 @@ def _try_get(ssh, sftp, domain, username, remote_path, local_path, ports=[22]):
     return (success_boolean, time_elapsed)
     """
     tic = time.time()
-    [success, numtrys, maxtrys] = [0, 0, 3]
+    (success, numtrys, maxtrys) = (0, 0, 3)
     while success == 0 and numtrys < maxtrys:
         try:
             sftp.get(remotepath=remote_path, localpath=local_path)
@@ -557,7 +572,7 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
     """
     fdict = {}
     remote_list = []
-    [success, numtrys, maxtrys] = [0, 0, 3]
+    (success, numtrys, maxtrys) = (0, 0, 3)
     while success == 0 and numtrys < maxtrys:
         try:
             remote_list = sftp.listdir_attr(remote_dir)
@@ -587,7 +602,7 @@ def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
     returns (ssh, sftp, remote_size, exists_boolean)
     """
     stats = None
-    [success, numtrys, maxtrys] = [0, 0, 3]
+    (success, numtrys, maxtrys) = (0, 0, 3)
     while success == 0 and numtrys < maxtrys:
         try:
             stats = sftp.stat(remote_path)
@@ -607,8 +622,8 @@ def _try_get_remote_stats(remote_path, ssh, sftp, domain, username, ports):
 ################################################################################
 def _try_exec(command, ssh, sftp, domain, username, ports=[22]):
     # @ TODO: wait for success, capture stdout, stderr messages
-    [success, numtrys, maxtrys] = [0, 0 ,3]
-    [stdin, stdout, stderr] = [None, None, None]
+    (success, numtrys, maxtrys) = (0, 0 ,3)
+    (stdin, stdout, stderr) = (None, None, None)
     while not success and numtrys < maxtrys:
         try:
             (stdin, stdout, stderr) = ssh.exec_command(command)
