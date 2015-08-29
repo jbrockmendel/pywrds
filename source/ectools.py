@@ -304,7 +304,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
     """
     tic = time.time()
     (ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
-    [numfiles, numlines, numlines0] = [0, 0, 0]
+    (numfiles, numlines, numlines0) = (0, 0, 0)
     (min_year, min_month, min_day) = wrdslib.min_YMD(min_date, dataset)
     flist = os.listdir(_dlpath)
 
