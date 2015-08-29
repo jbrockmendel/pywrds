@@ -1164,7 +1164,7 @@ except ImportError:
         + '"paramiko".  Please run "pip install paramiko".  Otherwise '
         + 'some ectools.py functionality will be limited.'
         )
-    has_modukes['paramiko'] = 0
+    has_modules['paramiko'] = 0
 
 
 

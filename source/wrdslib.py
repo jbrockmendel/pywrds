@@ -17,8 +17,9 @@ except ImportError: import json
 ################################################################################
 from . import sshlib
 
-from .wrds_parameters import wrds_domain, _get_all, first_dates, first_date_guesses
-from .wrds_parameters import date_vars, date_var_guesses, autoexec_text, bytes_per_line
+from .wrds_parameters import wrds_domain, _get_all, first_dates, \
+    first_date_guesses, date_vars, date_var_guesses, autoexec_text, \
+    bytes_per_line
 
 now = time.localtime()
 (this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
