@@ -110,10 +110,10 @@ def get_ymd_range(min_date, dataset, weekdays=1):
             new_ymd = [year, 0, 0]
             ymdrange.append(new_ymd)
         elif frequency =='M':
-            new_ymd = [[year, x, 0] for x in range(1,13)]
+            new_ymd = [[year, x, 0] for x in xrange(1,13)]
             ymdrange = ymdrange + new_ymd
         elif frequency == 'D':
-            new_ymd = [[year, x, y] for x in range(1,13) for y in range(1,32)]
+            new_ymd = [[year, x, y] for x in xrange(1,13) for y in xrange(1,32)]
             new_ymd = fix_weekdays(new_ymd, weekdays)
             ymdrange = ymdrange + new_ymd
 
@@ -171,7 +171,7 @@ def fix_weekdays(ymds, weekdays=1):
             wday = datetime.date(y,m,d).weekday()
         except ValueError:
             wday = -1
-        if weekdays == 1 and wday in range(5):
+        if weekdays == 1 and wday in xrange(5):
             # weekdays==1 --> only keep weekdays     #
             ymds2.append([y,m,d])
         elif weekdays == 0 and wday!=-1:
@@ -307,3 +307,24 @@ def min_YMD(min_date, dataset):
 
     return (min_year, min_month, min_day)
 
+
+
+
+
+################################################################################
+def get_numlines(path2file):
+    """get_numlines(path2file)
+
+    Reads a textfile located at path2file and returns the number of lines found.
+
+    return numlines
+    """
+    fd = open(path2file,'rb')
+    fsize = os.stat(fd.name).st_size
+    numlines = 0
+    first_line = fd.readline().split('\t')
+    while fd.tell() < fsize:
+        fline = fd.readline()
+        numlines += 1
+    fd.close()
+    return numlines
