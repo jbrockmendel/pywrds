@@ -89,17 +89,18 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
                     break
                 except paramiko.AuthenticationException:
                     ssh = None
-                    default_logger.warning(print_func()
-                        +' could not connect to the server '
-                        +str(domain)+' with username '
-                        +str(username)
+                    default_logger.warning(
+                        error_type.__module__+'.'+error_type.__name__
+                        + ' Could not connect to the server '
+                        + str(domain)+' with username '
+                        + str(username)
                         )
                     break
             except (paramiko.SSHException,socket.error):
                 (error_type, error_value, error_traceback) = sys.exc_info()
                 if port == ports[-1]:
                     ssh = None
-                    default_logger.error(print_func()+' '
+                    default_logger.error(
                         + error_type.__module__+'.'+error_type.__name__
                         + ': paramiko could not connect to '
                         + 'the server '+str(domain))
@@ -638,24 +639,6 @@ def _try_exec(command, ssh, sftp, domain, username, ports=[22]):
 
 
 
-
-
-################################################################################
-def print_func(level=1):
-    """print_func(level=1)
-
-    When called from within function "myfunction" defined in module
-    "mymodule", print_func(1) returns the string "mymodule.myfunction".
-    setting level=2 returns a string corresponding to the function
-    that called myfunction, and so on.
-
-    This is designed for identifying the sources of errors in logging.
-
-    return module.function
-    """
-    module_name   = sys._getframe(level).f_code.co_filename.split('/')[-1][:-3]
-    function_name = sys._getframe(level).f_code_co_name
-    return module_name +'.'+ function_name
 
 
 
