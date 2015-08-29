@@ -66,7 +66,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
     return (numfiles, total_rows, ssh, sftp, time_elapsed)
     """
     keep_going = 1
-    [startrow, numfiles, total_rows, tic] = [1, 0, 0, time.time()]
+    (startrow, numfiles, total_rows, tic) = (1, 0, 0, time.time())
 
     (ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
     rows_per_file = wrdslib.adjust_rows_using_quota(dataset, ssh)
