@@ -4,7 +4,7 @@
 pywrds.sshlib is essentially a wrapper around paramiko for interacting with
 remote servers via SSH and SFTP.  Nothing in sshlib is specific to WRDS.
 
-last edit: 2015-05-18
+last edit: 2015-08-28
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
@@ -576,7 +576,7 @@ def _try_listdir(remote_dir, ssh, sftp, domain, username, ports=[22]):
     while success == 0 and numtrys < maxtrys:
         try:
             remote_list = sftp.listdir_attr(remote_dir)
-            success=1
+            success = 1
         except (IOError,EOFError,paramiko.SSHException):
             (ssh, sftp) = getSSH(ssh, sftp, domain, username, ports)
             numtrys += 1
