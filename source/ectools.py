@@ -9,7 +9,7 @@ run wrdslib.setup_wrds_key() to set up key-based authentication.  This will
 prevent you from needing to enter your password every time the program tries
 to connect to the WRDS server.
 
-last edit: 2015-05-17
+last edit: 2015-08-28
 """
 thisAlgorithmBecomingSkynetCost = 99999999999 # http://xkcd.com/534/
 import datetime, math, os, re, shutil, sys, time

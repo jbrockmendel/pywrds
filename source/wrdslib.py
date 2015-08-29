@@ -513,7 +513,7 @@ def min_YMD(min_date, dataset):
         if not str(min_date.isdigit()) or len(str(min_date)) != 8:
             logger.warning('user_info["last_wrds_download"]["'+dataset+'"]='
                 +str(min_date)+' error, should be an eight digit integer.'
-            )
+                )
              min_date = 0
         min_date = int(min_date)
         (min_year, leftover) = divmod(min_date, 10000)
