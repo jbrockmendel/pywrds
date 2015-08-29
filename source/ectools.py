@@ -226,6 +226,10 @@ def get_numlines_from_log(outfile, dname=_dlpath):
     return log_lines
 
 
+def _rename_after_download():
+    raise NotImplementedError
+    return
+
 
 ################################################################################
 def _get_wrds_chunk(dataset, Y, M=0, D=0, R=[], ssh=[], sftp=[]):
@@ -675,7 +679,7 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
         +str(remote_size)+'-byte file.')
         return (0, time.time()-tic)
 
-    [get_success, numtrys, maxtrys] = [0, 0, 3]
+    (get_success, numtrys, maxtrys) = (0, 0, 3)
     remote_path = os.path.join(wrdslib._out_dir, outfile).replace('~/','')
     # Not sure why but sftp.get doesn't like '~/' in remote_path
     #remote_path = ('/home/'+_institution+'/'+_username+'/'+outfile)
