@@ -282,7 +282,7 @@ def put_ssh_key(domain, username):
             + ' with username '+str(username)
             )
     except (IOError,EOFError,paramiko.SSHException):
-        (ssh, sftp) = [None, None]
+        (ssh, sftp) = (None, None)
         logger.error('paramiko could not connect to the server '+str(domain)
             + ' with username '+str(username)
             )
@@ -323,7 +323,7 @@ def put_ssh_key(domain, username):
             + 'error_type='+str(error_type)+'\n'
             + 'error_value='+str(error_value)+'\n'
             + 'error_traceback='+str(error_traceback))
-        [ssh, sftp] = [None, None]
+        (ssh, sftp) = (None, None)
     return (ssh, sftp)
 
 
@@ -374,7 +374,7 @@ def _put_carefully(local_path, remote_path, ssh, sftp, domain, username, ports, 
     return (ssh, sftp, success, time_elapsed)
     """
     tic = time.time()
-    [success, num_trys, max_trys] = [0, 0, 3]
+    (success, num_trys, max_trys) = (0, 0, 3)
     (dname, fname) = os.path.split(local_path)
 
     (ssh, sftp, go_on, success) = _check_stats(local_path,
