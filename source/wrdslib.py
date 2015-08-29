@@ -15,15 +15,15 @@ try: import simplejson as json
 except ImportError: import json
 
 ################################################################################
-from . import sshlib
+from . import sshlib, static
 
 from .wrds_parameters import wrds_domain, _get_all, first_dates, \
     first_date_guesses, date_vars, date_var_guesses, autoexec_text, \
     bytes_per_line
 
-from .static import user_info, rows_per_file_adjusted, user_info_filename, \
-    user_path, wrds_datevar, get_ymd_range, min_YMD, download_path, \
-    wrds_institution, wrds_username, last_wrds_download
+
+from .static import user_info, wrds_datevar, download_path, \
+    wrds_institution, wrds_username
 
 
 
@@ -111,7 +111,7 @@ def estimate_bytes_per_line(dataset):
 default_max_usage = .5
 def adjust_rows_using_quota(dataset, ssh):
     (usage, quota, limit) = check_quota(ssh)
-    rows_per_file = rows_per_file_adjusted(dataset)
+    rows_per_file = static.rows_per_file_adjusted(dataset)
 
     if not isinstance(usage,int) or not isinstance(quota, int):
         # No useful info from the quota check.
@@ -266,7 +266,8 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
         front_content = "filename writer pipe 'compress > " + _out_dir+output_file+ "';\n"
         sas_content = front_content + sas_content
 
-    with open(os.path.join(download_path, sas_file), 'wb') as fd: ## @BUG: IOErro --> Permission denied
+    with open(os.path.join(download_path, sas_file), 'wb') as fd:
+        ## @BUG: IOErro --> Permission denied
         fd.write(sas_content)
 
 #   fd = open(os.path.join(download_path, sas_file), 'wb')
@@ -327,11 +328,10 @@ def update_user_info(numfiles, new_files, fname, dataset, year, month=0, day=0):
     """
     if new_files > 0:
         numfiles = numfiles + new_files
-        if 'last_wrds_download' not in user_info.keys():
-            user_info['last_wrds_download'] = {}
-        user_info['last_wrds_download'][dataset] = year*10000 + month*100 + day
+        last_wrds_download = user_info.setdefault('last_wrds_download', {})
+        last_wrds_download[dataset] = year*10000 + month*100 + day
         content = json.dumps(user_info, indent=4)
-        with open(user_info_filename, 'wb') as fd:
+        with open(static.user_info_filename, 'wb') as fd:
             fd.write(content)
     else:
         logger.error('Could not retrieve: ' + fname)
@@ -377,13 +377,14 @@ def get_wrds_institution(ssh, sftp):
     except IOError:
         logger.error('sftp cannot resolve a path on the wrds server')
         return None
+
     institution_path = re.sub('/home/', '', wrds_path).split('/')[0]
     if wrds_institution != institution_path:
         if wrds_institution == []:
             wrds_institution = institution_path
             user_info['wrds_institution'] = wrds_institution
             content = json.dumps(user_info, indent=4)
-            with open(user_info_filename, 'wb') as fd:
+            with open(static.user_info_filename, 'wb') as fd:
                 fd.write(content)
         else:
             logger.warning('user_info["wrds_institution"] does not '
