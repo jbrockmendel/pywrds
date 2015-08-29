@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 ################################################################################
-from . import sshlib, wrdslib
+from . import sshlib, wrdslib, static
 
 getSSH = sshlib.getSSH
 _try_get = sshlib._try_get
@@ -70,7 +70,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
 
     (ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
     rows_per_file = wrdslib.adjust_rows_using_quota(dataset, ssh)
-    #rows_per_file = wrdslib.rows_per_file_adjusted(dataset)
+    #rows_per_file = static.rows_per_file_adjusted(dataset)
 
     (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
     if os.path.exists(os.path.join(_dlpath, outfile)):
@@ -84,7 +84,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
             numfiles += 1
             if os.path.exists(os.path.join(_dlpath, outfile)):
                 log_lines = get_numlines_from_log(outfile, dname=_dlpath)
-                numlines = get_numlines(os.path.join(_dlpath, outfile))
+                numlines = static.get_numlines(os.path.join(_dlpath, outfile))
                 if log_lines > numlines:
                     logger.error('get_wrds error: file '
                         + outfile+' has '+ str(numlines)
@@ -305,7 +305,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
     tic = time.time()
     (ssh, sftp) = getSSH(ssh, sftp, domain=_domain, username=_username)
     (numfiles, numlines, numlines0) = (0, 0, 0)
-    (min_year, min_month, min_day) = wrdslib.min_YMD(min_date, dataset)
+    (min_year, min_month, min_day) = static.min_YMD(min_date, dataset)
     flist = os.listdir(_dlpath)
 
     if [min_year, min_month, min_day] == [-1, -1, -1]:
@@ -327,7 +327,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
         return (numfiles, time.time()-tic)
 
 
-    for ymd in wrdslib.get_ymd_range(min_date, dataset, 1):
+    for ymd in static.get_ymd_range(min_date, dataset, 1):
         (Y, M, D) = ymd
         (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
         if outfile in flist:
@@ -982,7 +982,7 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
             )
         return isready
 
-    #rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
+    #rows_per_file = static.rows_per_file_adjusted(fname0)
     flist0 = os.listdir(dname)
     flist0 = [x for x in flist0 if x.endswith('.tsv') and fname0 in x]
     #flist0 = [x for x in flist0 if re.search(fname0, x)]
@@ -1044,7 +1044,7 @@ def _recombine_ready(fname, rows_per_file, dname=None, suppress=0):
         flist2 = [x[1] for x in flist if x[1].endswith(str(max_num)+'.tsv')]
         if len(flist2) == 1:
             outfile = flist2[0]
-            numlines = get_numlines(os.path.join(dname, outfile))
+            numlines = static.get_numlines(os.path.join(dname, outfile))
             log_numlines = get_numlines_from_log(outfile, dname)
             if numlines != log_numlines:
                 isready = 0
@@ -1082,7 +1082,7 @@ def recombine_files(fname, rows_per_file, dname=None, suppress=0):
         return combined_files
 
     fname0 = re.sub('rows[0-9][0-9]*to[0-9][0-9]*\.tsv', '', fname)
-    #rows_per_file = wrdslib.rows_per_file_adjusted(fname0)
+    #rows_per_file = static.rows_per_file_adjusted(fname0)
 
     flist0 = [x for x in os.listdir(dname) if re.search(fname0, x)]
     flist0 = [x for x in flist0 if x.endswith('.tsv')]
@@ -1137,23 +1137,7 @@ def recombine_files(fname, rows_per_file, dname=None, suppress=0):
             os.remove(os.path.join(dname, fname1))
     return combined_files
 
-################################################################################
-def get_numlines(path2file):
-    """get_numlines(path2file)
 
-    Reads a textfile located at path2file and returns the number of lines found.
-
-    return numlines
-    """
-    fd = open(path2file,'rb')
-    fsize = os.stat(fd.name).st_size
-    numlines = 0
-    first_line = fd.readline().split('\t')
-    while fd.tell() < fsize:
-        fline = fd.readline()
-        numlines += 1
-    fd.close()
-    return numlines
 
 
 ################################################################################
