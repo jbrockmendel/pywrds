@@ -681,8 +681,7 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 
     (get_success, numtrys, maxtrys) = (0, 0, 3)
     remote_path = os.path.join(wrdslib._out_dir, outfile).replace('~/','')
-    # Not sure why but sftp.get doesn't like '~/' in remote_path
-    #remote_path = ('/home/'+_institution+'/'+_username+'/'+outfile)
+    # sftp.get doesn't like '~/' in remote_path
     write_file = '.'+outfile+'--writing'
     local_path = os.path.join(os.path.expanduser('~'), write_file)
     (get_success, ssh, sftp, dt) = _try_get(ssh,
@@ -693,7 +692,6 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
                                             local_path=local_path
                                             )
 
-    ## @TODO: report/handle failure
     logger.info('retrieve_file: '+str(outfile)
         + ' ('+str(remote_size)+' bytes) '
         + ' time elapsed='+str(round(time.time()-tic,3))
