@@ -103,7 +103,8 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
                     default_logger.error(
                         + error_type.__module__+'.'+error_type.__name__
                         + ': paramiko could not connect to '
-                        + 'the server '+str(domain))
+                        + 'the server '+str(domain)
+                        )
     if sftp:
         pwd = sftp.getcwd()
     return (ssh, sftp)
