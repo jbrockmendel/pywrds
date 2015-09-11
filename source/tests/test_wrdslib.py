@@ -6,7 +6,7 @@ import unittest
 from .. import wrdslib
 
 
-class Test_rows_per_file_adjusted(unittest.TestCase):
+class Test_wrds_sas_script(unittest.TestCase):
 	def setUp(self, dataset, Y, M, D):
 		(sas_file, output_file, dataset) = wrdslib.wrds_sas_script(dataset, Y, M, D)
 		return
