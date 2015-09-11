@@ -138,51 +138,6 @@ def adjust_rows_using_quota(dataset, ssh):
 
 
 ################################################################################
-def fix_input_name(dataset, year, month, day, rows=[]):
-    """fix_input_name(dataset, year, month, day, rows=[])
-
-    Adjust the user-supplied dataset name to use the same upper/lower case
-    conventions used on the WRDS server.
-
-    return (dataset, output_file)
-    """
-    # @TODO use dictionary.tables to get this right automatically
-    (Y, M, D, R) = (year, month, day, rows)
-    if year != 'all':
-        ystr = '_'*(dataset[-1].isdigit())+str(Y)
-        mstr = '' + (M != 0)*('0'*(month<10)+str(M))
-        dstr = (D != 0)*('0'*(D<10)+str(D))
-        ymdstr = ystr + mstr + dstr +'.tsv'
-        output_file = re.sub('\.', '_', dataset) + ymdstr
-    else:
-        output_file = re.sub('\.', '_', dataset)+'.tsv'
-
-    if dataset.lower() == 'optionm.opprcd':
-        dataset = dataset+str(year)
-
-    elif dataset.lower() in ['taq.cq', 'taq.ct']:
-        dataset = re.sub('cq', 'CQ', dataset)
-        dataset = re.sub('ct', 'CT', dataset)
-        ystr = '_' + str(Y)
-        mstr = ''+(M != 0)*('0'*(M<10)+str(M))
-        dstr = ''+(D != 0)*('0'*(D<10)+str(D))
-        ymdstr = ystr + mstr + dstr
-        dataset = dataset + ymdstr
-
-    elif dataset.lower() in ['taq.mast', 'taq.div']:
-        ymdstr = '_'+str(Y)+(M != 0)*('0'*(M<10) + str(M))
-        dataset = dataset + ymdstr
-
-    elif dataset.lower() == 'taq.rgsh':
-        ymdstr = str(100*Y+M)[2:]
-        dataset = 'taq.RGSH'+ymdstr
-
-    if R != []:
-        rowstr = 'rows'+str(R[0])+'to'+str(R[1])+'.tsv'
-        output_file = re.sub('.tsv$', '', output_file) + rowstr
-
-    return (dataset, output_file)
-
 
 
 ################################################################################
@@ -224,7 +179,7 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
         sas_file = sas_file + ymdstr
     sas_file = sas_file + '.sas'
 
-    (dataset, output_file) = fix_input_name(dataset, Y, M, D, R)
+    (dataset, output_file) = static.fix_input_name(dataset, Y, M, D, R)
 
     where_query = ';\n'
     if Y != 'all':

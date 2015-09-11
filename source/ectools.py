@@ -72,12 +72,12 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
     rows_per_file = wrdslib.adjust_rows_using_quota(dataset, ssh)
     #rows_per_file = static.rows_per_file_adjusted(dataset)
 
-    (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
+    (dset2, outfile) = static.fix_input_name(dataset, Y, M, D, [])
     if os.path.exists(os.path.join(_dlpath, outfile)):
         keep_going = 0
     while keep_going:
         R = [startrow, startrow-1+rows_per_file]
-        (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, R)
+        (dset2, outfile) = static.fix_input_name(dataset, Y, M, D, R)
         if not os.path.exists(os.path.join(_dlpath, outfile)):
             (keep_going, ssh, sftp, dt) = _get_wrds_chunk(dataset, Y, M, D, R, ssh, sftp)
         if keep_going > 0:
@@ -330,7 +330,7 @@ def wrds_loop(dataset, min_date=0, recombine=1, ssh=None, sftp=None):
 
     for ymd in static.get_ymd_range(min_date, dataset, 1):
         (Y, M, D) = ymd
-        (dset2, outfile) = wrdslib.fix_input_name(dataset, Y, M, D, [])
+        (dset2, outfile) = static.fix_input_name(dataset, Y, M, D, [])
         if outfile in flist:
             continue
         get_output = get_wrds(dataset,
