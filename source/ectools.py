@@ -87,7 +87,7 @@ def get_wrds(dataset, Y, M=0, D=0, ssh=[], sftp=[], recombine=1):
                 numlines = static.get_numlines(os.path.join(_dlpath, outfile))
                 if log_lines > numlines:
                     logger.error('get_wrds error: file '
-                        + outfile+' has '+ str(numlines)
+                        + outfile + ' has '+ str(numlines)
                         + ' lines, but '+ str(log_lines)
                         + ' were expected.'
                         )
@@ -154,6 +154,7 @@ def get_start_row(outfile):
 
     return start_row
     """
+    raise NotImplementedError
     return
 
 
