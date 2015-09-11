@@ -15,15 +15,14 @@ try: import simplejson as json
 except ImportError: import json
 
 ################################################################################
-from . import sshlib, static
+from . import sshlib, static, sas
 
 from .wrds_parameters import wrds_domain, _get_all, first_dates, \
     first_date_guesses, date_vars, date_var_guesses, autoexec_text, \
     bytes_per_line
 
 
-from .static import user_info, wrds_datevar, download_path, \
-    wrds_institution, wrds_username
+from .static import user_info, download_path, wrds_institution, wrds_username
 
 
 
@@ -134,12 +133,6 @@ def adjust_rows_using_quota(dataset, ssh):
 
 
 
-
-
-
-################################################################################
-
-
 ################################################################################
 def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
     """wrds_sas_script(dataset, year, month=0, day=0, rows=[])
@@ -161,112 +154,25 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
             putnames = yes;
         run;
 
-    return (sas_file, output_file, dataset)
+    return (script_filename, output_file, dataset)
     """
-    (Y, M, D, R) = (year, month, day, rows)
-    ystr = '' + ('_' + str(Y))*(Y != 'all')
-    mstr = '' + (M != 0)*('0'*(M<10)+str(M))
-    dstr = '' + (D != 0)*('0'*(D<10)+str(D))
-    ymdstr = ystr + mstr + dstr
-    sas_file = 'wrds_export_'+re.sub('\.','_',dataset)
-
-    _out_dir = user_info['server_output_dir']
-
-    if R != []:
-        rowstr = 'rows'+str(R[0])+'to'+str(R[1])
-        sas_file =  sas_file + ymdstr + rowstr
-    else:
-        sas_file = sas_file + ymdstr
-    sas_file = sas_file + '.sas'
-
-    (dataset, output_file) = static.fix_input_name(dataset, Y, M, D, R)
-
-    where_query = ';\n'
-    if Y != 'all':
-        dvar = wrds_datevar(dataset)
-        yquery = '(year('+dvar+') between '+str(Y)+' and '+str(Y)+')'
-
-        mquery = ''
-        if M != 0:
-            mquery = ' and (month('+dvar+') between '+str(M)+' and '+str(M)+')'
-
-        dquery = ''
-        if D != 0:
-            dquery = ' and (day('+dvar+') between '+str(D)+' and '+str(D)+')'
-
-        where_query = ' (where = ('
-        where_query = where_query + yquery
-        where_query = where_query + mquery
-        where_query = where_query + dquery
-        where_query = where_query + '));\n'
-
-    rowquery = ''
-    if R != []:
-        rowquery = '\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n'
-
-    sas_content = (
-        'DATA new_data;\n'
-        + '\tSET ' + dataset
-        + where_query
-        + rowquery + '\n'
-        + 'proc export data = new_data\n'
-        + '\toutfile = "'+_out_dir+output_file+'" \n'
-        + '\tdbms = tab \n'
-        + '\treplace; \n'
-        + '\tputnames = yes; \n'
-        + 'run; \n'
-        )
+    (script_filename, output_file, script_content) = sas.order_data_script(dataset, year, month, day, rows)
 
     if _use_zip:
-        sas_content = sas_content.replace('"'+_out_dir+output_file+'"', 'writer')
+        script_content = script_content.replace('"'+_out_dir+output_file+'"', 'writer')
         output_file = os.path.splitext(output_file)[0]+'.zip'
         front_content = "filename writer pipe 'compress > " + _out_dir+output_file+ "';\n"
-        sas_content = front_content + sas_content
+        script_content = front_content + script_content
 
-    with open(os.path.join(download_path, sas_file), 'wb') as fd:
-        ## @BUG: IOErro --> Permission denied
-        fd.write(sas_content)
+    script_path = os.path.join(download_path, script_filename)
+    if os.path.exists(script_path):
+        os.remove(script_path)
 
-#   fd = open(os.path.join(download_path, sas_file), 'wb')
-#   fd.write('DATA new_data;\n')
-#   fd.write('\tSET '+dataset)
-#   if Y != 'all':
-#       where_query = ' (where = ('
-#       year_query = ('(year('+wrds_datevar(dataset)+')'
-#           +' between '+str(Y)+' and '+str(Y)+')')
-#       where_query = where_query + year_query
-#
-#       if M != 0:
-#           month_query = (' and (month('+wrds_datevar(dataset)
-#               +') between '+str(M)+' and '+str(M)+')')
-#           where_query = where_query+month_query
-#
-#       if D != 0:
-#           day_query = (' and (day('+wrds_datevar(dataset)
-#               +') between '+str(D)+' and '+str(D)+')')
-#           where_query = where_query+day_query
-#
-#       where_query = where_query+'));\n'
-#       fd.write(where_query)
-#   else:
-#       fd.write(';\n')
-#
-#   if R != []:
-#       rowquery = ('\tIF ('+str(R[0])+'<= _N_<= '+str(R[1])+');\n')
-#       fd.write(rowquery)
-#
-#   fd.write('\n')
-#   fd.write('proc export data = new_data\n')
-#   fd.write(('\toutfile = "~/'+output_file+'" \n'
-#       +'\tdbms = tab \n'
-#       +'\treplace; \n'
-#       +'\tputnames = yes; \n'
-#       +'run; \n')
-#   )
-#   fd.close()
+    with open(script_path, 'wb') as fd:
+        fd.write(script_content)
 
-    os.chmod(os.path.join(download_path, sas_file), 777)
-    return (sas_file, output_file, dataset)
+    os.chmod(script_path, 0o777)
+    return (script_filename, output_file, dataset)
 ################################################################################
 
 
