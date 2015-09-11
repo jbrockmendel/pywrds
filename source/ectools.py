@@ -665,7 +665,7 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 
     return retrieve_success_boolean
     """
-    _out_dir = wrdslib.user_info['server_output_dir']]
+    _out_dir = wrdslib.user_info['server_output_dir']
     tic = time.time()
     if remote_size == 0:
         return (0, time.time()-tic)
