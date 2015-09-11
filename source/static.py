@@ -54,6 +54,7 @@ download_path = user_info.get('download_path', download_path)
 wrds_institution = user_info.setdefault('wrds_institution', [])
 wrds_username = user_info.setdefault('wrds_username', [])
 last_wrds_download = user_info.setdefault('last_wrds_download', {})
+server_output_dir = user_info.setdefault('server_output_dir', '~/')
 
 
 

@@ -127,7 +127,7 @@ def adjust_rows_using_quota(dataset, ssh):
 
     new_num_lines = int(free_bytes*default_max_usage/bytes_per_line)
 
-    if _out_dir != "~/":
+    if user_info['server_output_dir'] != "~/":
         new_num_lines = new_num_lines*10
     return new_num_lines
 
@@ -214,6 +214,8 @@ def wrds_sas_script(dataset, year, month=0, day=0, rows=[]):
     dstr = '' + (D != 0)*('0'*(D<10)+str(D))
     ymdstr = ystr + mstr + dstr
     sas_file = 'wrds_export_'+re.sub('\.','_',dataset)
+
+    _out_dir = user_info['server_output_dir']
 
     if R != []:
         rowstr = 'rows'+str(R[0])+'to'+str(R[1])

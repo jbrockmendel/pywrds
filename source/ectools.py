@@ -388,7 +388,8 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
     return put_success_boolean
     """
-    dir_to_list = '.' if wrdslib._out_dir == '~/' else wrdslib._out_dir
+    _out_dir = wrdslib.user_info['server_output_dir']]
+    dir_to_list = '.' if _out_dir == '~/' else _out_dir
     (ssh, sftp, fdict) = _try_listdir(dir_to_list, ssh, sftp, _domain, _username)
     initial_files = fdict.values()
 
@@ -664,13 +665,15 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
 
     return retrieve_success_boolean
     """
+    _out_dir = wrdslib.user_info['server_output_dir']]
     tic = time.time()
     if remote_size == 0:
         return (0, time.time()-tic)
     if remote_size >= 10**7:
         # skip messages for small files        #
         logger.info('starting retrieve_file: '+outfile
-            +' ('+str(remote_size)+') bytes')
+            +' ('+str(remote_size)+') bytes'
+            )
 
     vfs = os.statvfs(_dlpath)
     free_local_space = vfs.f_bavail*vfs.f_frsize
@@ -681,7 +684,7 @@ def _retrieve_file(ssh, sftp, outfile, remote_size):
         return (0, time.time()-tic)
 
     (get_success, numtrys, maxtrys) = (0, 0, 3)
-    remote_path = os.path.join(wrdslib._out_dir, outfile).replace('~/','')
+    remote_path = os.path.join(_out_dir, outfile).replace('~/','')
     # sftp.get doesn't like '~/' in remote_path
     write_file = '.'+outfile+'--writing'
     local_path = os.path.join(os.path.expanduser('~'), write_file)
