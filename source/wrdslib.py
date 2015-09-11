@@ -30,7 +30,7 @@ from .static import user_info, wrds_datevar, download_path, \
 now = time.localtime()
 (this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
 
-
+_use_zip = False
 
 
 ################################################################################
