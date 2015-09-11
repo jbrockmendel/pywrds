@@ -28,13 +28,15 @@ thisAlgorithmBecomingSkynetCost = 99999999999
 __all__ = [
     "ectools",
     "wrdslib",
+    "static",
+    "sas",
     "wrds_loop",
     "get_wrds",
     "find_wrds",
     "setup_wrds_key",
     "user_info"
     ]
-from . import ectools, wrdslib
+from . import ectools, wrdslib, sas, static
 
 try: import simplejson as json
 except ImportError: import json
