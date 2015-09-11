@@ -388,7 +388,7 @@ def _put_sas_file(ssh, sftp, outfile, sas_file):
 
     return put_success_boolean
     """
-    _out_dir = wrdslib.user_info['server_output_dir']]
+    _out_dir = wrdslib.user_info['server_output_dir']
     dir_to_list = '.' if _out_dir == '~/' else _out_dir
     (ssh, sftp, fdict) = _try_listdir(dir_to_list, ssh, sftp, _domain, _username)
     initial_files = fdict.values()
