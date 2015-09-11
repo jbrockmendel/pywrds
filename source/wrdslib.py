@@ -4,7 +4,7 @@
 pywrds.wrdslib is a collection of functions used by ectools which use or
 provide information specific to the WRDS SAS system.
 
-last edit: 2015-08-28
+last edit: 2015-09-10
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import datetime, os, re, sys, time
@@ -21,10 +21,7 @@ from .wrds_parameters import wrds_domain, _get_all, first_dates, \
     first_date_guesses, date_vars, date_var_guesses, autoexec_text, \
     bytes_per_line
 
-
 from .static import user_info, download_path, wrds_institution, wrds_username
-
-
 
 now = time.localtime()
 (this_year, this_month, today) = (now.tm_year, now.tm_mon, now.tm_mday)
@@ -85,6 +82,7 @@ def check_quota(ssh):
         # @TODO: Fall back to manually checking the sum size of files in the
         # user directory.
         pass
+
     return (usage, quota, limit)
 
 
