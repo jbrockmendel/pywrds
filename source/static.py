@@ -373,14 +373,14 @@ def min_YMD(min_date, dataset):
 
 
 ################################################################################
-def get_numlines(path2file):
-    """get_numlines(path2file)
+def get_numlines(path):
+    """get_numlines(path)
 
-    Reads a textfile located at path2file and returns the number of lines found.
+    Reads a textfile located at path and returns the number of lines found.
 
     return numlines
     """
-    fd = open(path2file,'rb')
+    fd = open(path,'rb')
     fsize = os.stat(fd.name).st_size
     numlines = 0
     first_line = fd.readline().split('\t')
