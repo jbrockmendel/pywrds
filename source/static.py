@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 try: import simplejson as json
 except ImportError: import json
 
+import holidays
 
 from .wrds_parameters import wrds_domain, _get_all, first_dates, \
     first_date_guesses, date_vars, date_var_guesses, autoexec_text, \
@@ -202,7 +203,7 @@ def get_loop_frequency(dataset, year):
 
 
 ################################################################################
-def fix_weekdays(ymds, weekdays=1):
+def fix_weekdays(ymds, weekdays=1, skip_holidays=1):
     """fix_weekdays(ymds, weekdays=1)
 
     Take a set of (year, month, date) tuples "ymds" and removes those which
@@ -211,21 +212,32 @@ def fix_weekdays(ymds, weekdays=1):
     If weekdays is set to its default value of 1, also remove
     Saturday and Sundays.
 
+    If skip_holidays is set to its default of 1, remove US holidays, which
+    are not in general trading days.
+
     return ymds
     """
-    # @TODO: holidays, see pypi's "holidays"
+    us_holidays = holidays.US() # Lazy initialization
     ymds2 = []
     for [y, m, d] in ymds:
+
         try:
-            wday = datetime.date(y,m,d).weekday()
+            dtime = datetime.date(y, m, d)
+            wday = dtime.weekday()
         except ValueError:
-            wday = -1
-        if weekdays == 1 and wday in xrange(5):
-            # weekdays==1 --> only keep weekdays     #
+            # Not a valid date
+            continue
+
+        if weekdays and wday >= 5:
+            # weekdays==1 --> drop weekends
+            continue
+
+        elif skip_holidays and dtime in us_holidays:
+            continue
+
+        else:
             ymds2.append([y,m,d])
-        elif weekdays == 0 and wday!=-1:
-            # weekdays==0 --> keey any valid day     #
-            ymds2.append([y,m,d])
+
     return ymds2
 
 

@@ -5,7 +5,7 @@ except ImportError:
     ez_setup.use_setuptools()
     from setuptools import setup, find_packages
 
-requirements = ['paramiko']
+requirements = ['paramiko', 'holidays']
 
 setup(
     name='pywrds',
