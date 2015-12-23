@@ -72,8 +72,8 @@ def getSSH(ssh, sftp, domain, username, ports=[22]):
             except paramiko.AuthenticationException:
                 # @TODO: Why is there both default_logger and logger?
                 default_logger.info('key-based authentication to '
-                    +'server '+str(domain) + ' failed, attempting '
-                    +'password-based authentication')
+                    + 'server '+str(domain) + ' failed, attempting '
+                    + 'password-based authentication')
                 try:
                     prompt = str(domain)+' password: '
                     ssh.connect(domain,
@@ -165,7 +165,7 @@ def ssh_keygen():
     ## on Windows systems.
     if not has_modules['Crypto.PublicKey.RSA']:
         logger.warning('sshlib.ssh_keygen is unavailable without '
-            +'dependency "Crypto.PublicKey.RSA".  Returning None.'
+            + 'dependency "Crypto.PublicKey.RSA".  Returning None.'
             )
         return None
 
@@ -247,7 +247,7 @@ def put_ssh_key(domain, username):
     key_path = ssh_keygen()
     if not key_path:
         logger.warning('put_wrds_key() cannot run until the error '
-            'produced by ssh_keygen() is resolved.')
+            + 'produced by ssh_keygen() is resolved.')
         return (None, None)
 
     ssh = paramiko.SSHClient()
@@ -256,7 +256,7 @@ def put_ssh_key(domain, username):
         ssh.connect(domain, username=username, key_filename=key_path)
         sftp = ssh.open_sftp()
         logger.info('key-based authentication is already set up '
-            +'on the server ' + domain)
+            + 'on the server ' + domain)
         return (ssh, sftp)
     except paramiko.AuthenticationException:
         (ssh, sftp) = (None, None)
@@ -282,7 +282,7 @@ def put_ssh_key(domain, username):
 
     if not sftp:
         logger.error('Connection to domain '+domain+' failed, '
-            +'put_ssh_key() returning unsuccessfully')
+            + 'put_ssh_key() returning unsuccessfully')
         return (ssh, sftp)
 
     remote_list = sftp.listdir()
@@ -302,8 +302,8 @@ def put_ssh_key(domain, username):
     ssh.close()
 
     logger.info('SSH key successfully deposited on the '
-        +domain+' server.  Checking that passwordless '
-        +'login works correctly...')
+        + domain+' server.  Checking that passwordless '
+        + 'login works correctly...')
     try:
         ssh.connect(domain, username=username, key_filename=key_path)
         logger.info('Passwordless login was successful.')
