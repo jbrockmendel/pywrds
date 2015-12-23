@@ -173,49 +173,23 @@ def ssh_keygen():
     ssh_dir = os.path.split(key_path)[0]
     ssh_dirlist = os.listdir(key_path)
 
+    home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
     pub_path = os.path.join(ssh_dir, 'id_rsa.pub')
-    pub_read = os.path.exists(pub_path) and os.access(pub_path, os.R_OK)
-    pub_write = pub_read and os.access(pub_path, os.W_OK)
-
     priv_path = os.path.join(ssh_dir, 'id_rsa')
-    priv_read = os.path.exists(priv_path) and os.access(priv_path, os.R_OK)
-    priv_write = pub_read and os.access(priv_path, os.W_OK)
 
-    # @TODO: warn and return in cases of permission problems.
-    if 'id_rsa' not in ssh_dirlist and 'id_rsa.pub' not in ssh_dirlist:
-        key = Crypto.PublicKey.RSA.generate(2048)
-        with open(priv_path, 'wb') as fd:
-            fd.write(key.exportKey())
+    is os.path.exists(priv_path) and os.path.exists(pub_path):
+        pass
 
-        with open(pub_path, 'wb') as fd:
-            fd.write(key.publickey().exportKey('OpenSSH'))
-
-        os.chmod(priv_path, 600)
-        os.chmod(pub_path, 600)
-        os.chmod(ssh_dir, 700)
-        home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
-        os.chmod(home_dir,700)
-    elif 'id_rsa' in ssh_dirlist:
+    elif os.path.exists(priv_path):
         with open(priv_path, 'rb') as fd:
             private_key = fd.read()
-        # begin unmerged lines from cpt branch
-        ## BUG: PyCrypto not working with password encrypted keys, see
-        ## http://stackoverflow.com/questions/20613946/how-can-i-read-a-standard-openssl-rsa-private-key-with-pycrypto-and-decrypt-with
-        ## Plus, not sure why you need all this when you just pass back the
-        ## key_path.
-        # end unmgerged lines from cpt branch, everything below
-        # here in this "elif" block is commented out in that branch.
+
         pk = Crypto.PublicKey.RSA.importKey(private_key)
         public_key = pk.publickey().exportKey('OpenSSH')
         with open(pub_path, 'wb') as fd:
             fd.write(public_key)
 
-        os.chmod(priv_path, 600)
-        os.chmod(pub_path, 600)
-        os.chmod(ssh_dir, 600)
-        home_dir = os.path.split(ssh_dir)[0] # alt: os.path.expanduser('~')
-        os.chmod(home_dir, 700)
-    elif 'id_rsa.pub' in ssh_dirlist:
+    elif os.path.exists(pub_path):
         logger.warning('ssh_keygen() expected the directory '+ssh_dir
             + ' to contain either zero or both of "id_rsa", "id_rsa.pub",'
             + ' but only "id_rsa.pub" was found.  Aborting ssh_keygen on '
@@ -223,6 +197,23 @@ def ssh_keygen():
             + 'part of the user.'
             )
         key_path = None
+
+    else:
+        key = Crypto.PublicKey.RSA.generate(2048)
+        with open(priv_path, 'wb') as fd:
+            fd.write(key.exportKey())
+
+        with open(pub_path, 'wb') as fd:
+            fd.write(key.publickey().exportKey('OpenSSH'))
+
+
+    if os.path.exists(priv_path):
+        # If the private key exists, they all should exist.
+        # These permissions should already be set, but re-check them regardless.
+        os.chmod(priv_path, 0o600)
+        os.chmod(pub_path, 0o600)
+        os.chmod(ssh_dir, 0o600)
+        os.chmod(home_dir, 0o700)
     return key_path
 
 
