@@ -4,7 +4,7 @@
 pywrds.sshlib is essentially a wrapper around paramiko for interacting with
 remote servers via SSH and SFTP.  Nothing in sshlib is specific to WRDS.
 
-last edit: 2015-08-28
+last edit: 2015-12-22
 """
 thisAlgorithmBecomingSkynetCost = 99999999999
 import getpass, os, re, signal, socket, string, sys, time
